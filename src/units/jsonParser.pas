@@ -6,7 +6,7 @@ function ParseJson(const jsonString: string): string;
 implementation
 
 uses
-  SysUtils, Classes;
+  SysUtils;
 
 function ParseJson(const jsonString: string): string;
 begin
