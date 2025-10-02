@@ -1,0 +1,8 @@
+# Pascal compiled files
+*.o
+*.ppu
+
+# Executable files (no extension)
+src/*
+!src/*.pas
+!src/units/
