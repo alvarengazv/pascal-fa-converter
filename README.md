@@ -30,7 +30,7 @@ Nesta seção estão exemplificados os meios através dos quais se tornam possí
 Inicialmente, algumas considerações importantes sobre como se deve preparar o ambiente para compilar e executar o programa:
 
 > [!NOTE]
-> Recomenda-se usar uma distribuição de sistema operacional Linux ou o Windows Subsystem for Linux (WSL), pois os comandos no [`exec.sh`][exec.sh] foram selecionados para funcionar em um ambiente [_shell/bash_][bash-url].
+> Recomenda-se usar uma distribuição de sistema operacional Linux ou o Windows Subsystem for Linux (WSL), pois os comandos no [`exec.sh`](exec.sh) foram selecionados para funcionar em um ambiente [_shell/bash_][bash-url].
 
 Considerando um ambiente _shell_, garanta que os seguintes comandos já foram executados:
   - Atualize os pacotes antes da instalação dos compiladores:
