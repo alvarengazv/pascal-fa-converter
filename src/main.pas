@@ -2,50 +2,7 @@
 program main;
 
 uses
-    SysUtils, Classes, fpjson, jsonparser;
-
-type
-  TTransicao = record
-    fromState: string;
-    symbol: char;
-    toState: string;
-end;
-
-type
-  AFD = record
-    alfabeto: array of char;
-    estados: array of string;
-    estadoInicial: string;
-    estadosFinais: array of string;
-    transicoes: array of TTransicao;
-end;
-
-type
-  AFN = record
-    alfabeto: array of char;
-    estados: array of string;
-    estadoInicial: array of string;
-    estadosFinais: array of string;
-    transicoes: array of TTransicao;
-end;
-
-type
-  AFN_E = record
-    alfabeto: array of char;
-    estados: array of string;
-    estadoInicial: array of string;
-    estadosFinais: array of string;
-    transicoes: array of TTransicao;
-end;
-
-type
-  AFN_multiestado_inicial = record
-    alfabeto: array of char;
-    estados: array of string;
-    estadosIniciais: array of string;
-    estadosFinais: array of string;
-    transicoes: array of TTransicao;
-end;
+    SysUtils, Classes, fpjson, jsonparser, ConverterAFNtoAFD, AFN, AFD;
 
 var
   data: TJSONData;
@@ -224,7 +181,26 @@ begin
         case choice of
             '0': Writeln('Função 0 selecionada');
             '1': Writeln('Função 1 selecionada');
-            '2': Writeln('Função 2 selecionada');
+            '2':
+            begin
+                Writeln('Função 2 selecionada');
+                if isAFN or isAFN_E or isAFN_Multiestado_Inicial then
+                begin
+                    var afd_result := ConvertAFNtoAFD(alfabeto, estados, estadosIniciais, estadosFinais, transicoes);
+                    Writeln('AFD Resultante:');
+                    Writeln('Estados: ', Length(afd_result.estados));
+                    Writeln('Estado Inicial: ', afd_result.estadoInicial);
+                    Wwrite('Estados Finais: ');
+                    for i := 0 to High(afd_result.estadosFinais) do
+                        Write(afd_result.estadosFinais[i], ' ');
+                    Writeln;
+                    Writeln('Transições: ', Length(afd_result.transicoes));
+                    for i := 0 to High(afd_result.transicoes) do
+                        Writeln('De ', afd_result.transicoes[i].fromState, ' para ', afd_result.transicoes[i].toState, ' com símbolo ', afd_result.transicoes[i].symbol);
+                end
+                else
+                    Writeln('O autômato já é um AFD, não é necessário converter.');
+            end;
             '3': Writeln('Função 3 selecionada');
             '4':
             begin
