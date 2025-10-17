@@ -1,18 +1,16 @@
 unit AFD;
 interface
 
-type
-    TTransicao = record
-        fromState: string;
-        toState: string;
-        symbol: char; // Usar char para representar o símbolo da transição
-    end;
+uses
+    CommonTypes;
 
+type
     TAFD = record
         alfabeto: array of char;
         estados: array of string;
         estadoInicial: string;
         estadosFinais: array of string;
-        transicoes: array of TTransicao;
+        transicoes: array of CommonTypes.TTransicao;
     end;
+implementation
 end.

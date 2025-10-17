@@ -9,7 +9,7 @@ mkdir -p build
 # -FUbuild: Colocar arquivos de unidade compilados no diretório build
 # -Fibuild: Procurar unidades compiladas no diretório build
 # -obuild/main: Saída do executável para build/main
-fpc -Fusrc/units -Fusrc -FUbuild -Fibuild -obuild/main src/main.pas
+fpc -Fusrc/units -Fusrc -Fusrc/util -FUbuild -Fibuild -obuild/main src/main.pas
 
 # Check if compilation was successful
 if [ $? -eq 0 ]; then

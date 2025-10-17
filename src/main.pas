@@ -2,16 +2,16 @@
 program main;
 
 uses
-    SysUtils, Classes, fpjson, jsonparser, ConverterAFNtoAFD, AFN, AFD;
+    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes;
 
 var
   data: TJSONData;
   inputFileName: string;
   choice, subchoice: string;
-  afd_obj: AFD;
-  afn_obj: AFN;
-  afn_e_obj: AFN_E;
-  afn_multiestado_inicial_obj: AFN_multiestado_inicial;
+  afd_result: TAFD;
+  afn_obj: TAFN;
+//   afn_e_obj: TAFN_E;
+//   afn_multiestado_inicial_obj: TAFN_multiestado_inicial;
   alfabeto: array of char;
   estados: array of string;
   estadosIniciais: array of string;
@@ -50,15 +50,20 @@ begin
         inputFileName := 'input/' + ParamStr(1)
     else
         inputFileName := 'input/automato.json';
-        
+      
     WriteLn('Using input file: ', inputFileName);
 
+    isAFD := False;
+    isAFN := False;
+    isAFN_E := False;
+    isAFN_Multiestado_Inicial := False;
+
     data := GetJSON(TFileStream.Create(inputFileName, fmOpenRead), True);
-    
+    {
     WriteLn('--- JSON Content ---');
     WriteLn(data.FormatJSON);
     WriteLn('--- End JSON ---');
-
+    }
     if data.JSONType = jtObject then
     begin
         jsonObj := TJSONObject(data);
@@ -138,14 +143,15 @@ begin
                               count := 0;
                               for j := 0 to jsonArr.Count - 1 do
                               begin
-                                  if (transicoes[j].fromState = transicoes[i].fromState) and (transicoes[j].symbol = transicoes[i].symbol) then
+                                if (transicoes[j].fromState = transicoes[i].fromState) and (transicoes[j].symbol = transicoes[i].symbol) then
                                       Inc(count);
+                                if (count > 1) and (not isAFN) then
+                                begin
+                                    isAFN := True;
+                                    Break;
+                                end;
                               end;
-                              if count > 1 then
-                              begin
-                                  isAFN := True;
-                                  Break;
-                              end;
+                              
                             end;
                         end
                     end;
@@ -159,6 +165,11 @@ begin
             end;
         end;
     end;
+
+    WriteLn('Quantidade de Transições: ', Length(transicoes));
+    for i := 0 to High(transicoes) do
+        WriteLn('De ', transicoes[i].fromState, ' para ', transicoes[i].toState, ' com símbolo ', transicoes[i].symbol); 
+
 
     if (not isAFN) and (not isAFN_E) and (not isAFN_Multiestado_Inicial) then
         isAFD := True;
@@ -184,19 +195,30 @@ begin
             '2':
             begin
                 Writeln('Função 2 selecionada');
-                if isAFN or isAFN_E or isAFN_Multiestado_Inicial then
+                if isAFN then
                 begin
-                    var afd_result := ConvertAFNtoAFD(alfabeto, estados, estadosIniciais, estadosFinais, transicoes);
-                    Writeln('AFD Resultante:');
-                    Writeln('Estados: ', Length(afd_result.estados));
-                    Writeln('Estado Inicial: ', afd_result.estadoInicial);
-                    Wwrite('Estados Finais: ');
-                    for i := 0 to High(afd_result.estadosFinais) do
-                        Write(afd_result.estadosFinais[i], ' ');
-                    Writeln;
-                    Writeln('Transições: ', Length(afd_result.transicoes));
-                    for i := 0 to High(afd_result.transicoes) do
-                        Writeln('De ', afd_result.transicoes[i].fromState, ' para ', afd_result.transicoes[i].toState, ' com símbolo ', afd_result.transicoes[i].symbol);
+                    Writeln('Convertendo AFN para AFD...');
+                    afn_obj.alfabeto := alfabeto;
+                    afn_obj.estados := estados;
+                    afn_obj.estadosIniciais := estadosIniciais;
+                    afn_obj.estadosFinais := estadosFinais;
+                    afn_obj.transicoes := transicoes;
+                    afn_obj.isAFN := isAFN;
+                    afn_obj.isAFN_E := isAFN_E;
+                    afn_obj.isAFN_Multiestado_Inicial := isAFN_Multiestado_Inicial;
+                    Writeln('isAFN: ', BoolToStr(afn_obj.isAFN, True));
+
+                    afd_result := ConvertAFNtoAFD.ConvertAFNtoAFD(afn_obj);
+                    // Writeln('AFD Resultante:');
+                    // Writeln('Estados: ', Length(afd_result.estados));
+                    // Writeln('Estado Inicial: ', afd_result.estadoInicial);
+                    // Writeln('Estados Finais: ');
+                    // for i := 0 to High(afd_result.estadosFinais) do
+                    //     Write(afd_result.estadosFinais[i], ' ');
+                    // Writeln;
+                    // Writeln('Transições: ', Length(afd_result.transicoes));
+                    // for i := 0 to High(afd_result.transicoes) do
+                    //     Writeln('De ', afd_result.transicoes[i].fromState, ' para ', afd_result.transicoes[i].toState, ' com símbolo ', afd_result.transicoes[i].symbol);
                 end
                 else
                     Writeln('O autômato já é um AFD, não é necessário converter.');

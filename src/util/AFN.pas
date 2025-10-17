@@ -1,21 +1,19 @@
 unit AFN;
 interface
 
-type
-    TTransicao = record
-        fromState: string;
-        toState: string;
-        symbol: char; // Usar char para representar o símbolo da transição
-    end;
+uses
+    CommonTypes;
 
+type
     TAFN = record
         alfabeto: array of char;
         estados: array of string;
         estadosIniciais: array of string;
         estadosFinais: array of string;
-        transicoes: array of TTransicao;
+        transicoes: array of CommonTypes.TTransicao;
         isAFN: boolean;
         isAFN_E: boolean; 
         isAFN_Multiestado_Inicial: boolean;
     end;
+implementation
 end.
