@@ -5,47 +5,46 @@ uses
     SysUtils, Classes, fpjson, jsonparser;
 
 type
-  TTransicao = record
+  Transicao = record
     fromState: string;
     symbol: char;
     toState: string;
-end;
+  end;
 
-type
   AFD = record
     alfabeto: array of char;
     estados: array of string;
     estadoInicial: string;
     estadosFinais: array of string;
-    transicoes: array of TTransicao;
-end;
+    transicoes: array of Transicao;
+  end;
 
-type
   AFN = record
     alfabeto: array of char;
     estados: array of string;
     estadoInicial: array of string;
     estadosFinais: array of string;
-    transicoes: array of TTransicao;
-end;
+    transicoes: array of Transicao;
+  end;
 
-type
   AFN_E = record
     alfabeto: array of char;
     estados: array of string;
     estadoInicial: array of string;
     estadosFinais: array of string;
-    transicoes: array of TTransicao;
-end;
+    transicoes: array of Transicao;
+  end;
 
-type
   AFN_multiestado_inicial = record
     alfabeto: array of char;
     estados: array of string;
     estadosIniciais: array of string;
     estadosFinais: array of string;
-    transicoes: array of TTransicao;
-end;
+    transicoes: array of Transicao;
+  end;
+
+    //Vetor de vetores... Matriz.
+  IntMatriz = array of array of Integer;
 
 var
   data: TJSONData;
@@ -59,32 +58,156 @@ var
   estados: array of string;
   estadosIniciais: array of string;
   estadosFinais: array of string;
-  transicoes: array of TTransicao;
+  transicoes: array of Transicao;
   jsonObj: TJSONObject;
   jsonArr: TJSONArray;
-  i: Integer;
-  j: Integer;
-  k: Integer;
-  count: Integer;
-  
+  i, j, k, count: Integer;
   item: TJSONData;
-  innerObj: TJSONObject;
   innerArr: TJSONArray;
   s: string;
-  isAFD: Boolean;
-  isAFN: Boolean;
-  isAFN_E: Boolean;
-  isAFN_Multiestado_Inicial: Boolean;
+  isAFD, isAFN, isAFN_E, isAFN_Multiestado_Inicial: Boolean;
+  sl: TStringList;
+  fname, w: string;
+
+// ======================= 
+
+function ExisteNaoDeterminismo(const T: array of Transicao): boolean;
+var
+  i, j: integer;
+begin
+  ExisteNaoDeterminismo := False;
+  for i := 0 to High(T) do
+  begin
+    if (T[i].fromState = '') or (T[i].symbol = #0) then Continue;
+    for j := i+1 to High(T) do
+    begin
+      if (T[j].fromState = '') or (T[j].symbol = #0) then Continue;
+      if (T[i].fromState = T[j].fromState) and (T[i].symbol = T[j].symbol) then
+      begin
+        if (T[i].toState <> T[j].toState) then
+        begin
+          ExisteNaoDeterminismo := True;
+          Exit;
+        end;
+      end;
+    end;
+  end;
+end;
+
+//Mapear nomes de estado p/ índices inteiros
+function IndexOfStr(const arr: array of string; const s: string): Integer;
+var i: Integer;
+begin
+  for i := 0 to High(arr) do
+    if arr[i] = s then
+    begin
+      IndexOfStr := i;
+      Exit;
+    end;
+  IndexOfStr := -1;
+end;
+
+//Mapear nomes de estado p/ índices inteiros
+function IndexOfChar(const arr: array of char; const c: char): Integer;
+var i: Integer;
+begin
+  for i := 0 to High(arr) do
+    if arr[i] = c then
+    begin
+      IndexOfChar := i;
+      Exit;
+    end;
+  IndexOfChar := -1;
+end;
+
+//Construindo a Matriz de transições
+procedure BuildDelta(const estados: array of string; const alfabeto: array of char;
+  const trans: array of Transicao; var delta: IntMatriz);
+var
+  i, ns, na, f, a, t: Integer;
+  //ns -> Número de estados, na -> Tamanho do Alfabeto
+  //Esses dois definem o tamanho da matriz delta
+begin
+  ns := Length(estados);
+  na := Length(alfabeto);
+  SetLength(delta, ns);
+  for i := 0 to ns-1 do
+  begin
+    SetLength(delta[i], na);
+    FillChar(delta[i][0], SizeOf(Integer)*na, $FF); // -1 em todos
+  end;
+
+  for i := 0 to High(trans) do
+  begin
+    f := IndexOfStr(estados, trans[i].fromState); //Linha da Matriz
+    a := IndexOfChar(alfabeto, trans[i].symbol);  //Coluna da Matriz
+    t := IndexOfStr(estados, trans[i].toState);   //Valor Salvo na Matriz
+    if (f >= 0) and (a >= 0) and (t >= 0) then
+      delta[f][a] := t;
+  end;
+end;
+
+function TestarPalavraAFD(const estados: array of string; const alfabeto: array of char;
+  const estadoInicial: string; const estadosFinais: array of string;
+  const trans: array of Transicao; const palavra: string): Boolean;
+var
+  delta: IntMatriz;
+  i, cur, symi, nxt: Integer;
+  finalsMask: array of Boolean;
+begin
+  TestarPalavraAFD := False;
+
+  BuildDelta(estados, alfabeto, trans, delta);
+
+  SetLength(finalsMask, Length(estados));
+  for i := 0 to High(finalsMask) do finalsMask[i] := False;
+  for i := 0 to High(estadosFinais) do
+  begin
+    nxt := IndexOfStr(estados, estadosFinais[i]);
+    if nxt >= 0 then finalsMask[nxt] := True;
+  end;
+
+  cur := IndexOfStr(estados, estadoInicial);
+  if cur < 0 then
+  begin
+    TestarPalavraAFD := False; Exit;
+  end;
+
+  for i := 1 to Length(palavra) do
+  begin
+    symi := IndexOfChar(alfabeto, palavra[i]);
+    if symi < 0 then
+    begin
+      TestarPalavraAFD := False; Exit; // símbolo fora do alfabeto
+    end;
+
+    //Pega a transição do estado atual com o símbolo atual e diz o próximo estado.
+    nxt := delta[cur][symi];
+    if nxt < 0 then
+    begin
+      TestarPalavraAFD := False; Exit; // transição não definida
+    end;
+    cur := nxt;
+  end;
+
+  TestarPalavraAFD := finalsMask[cur];
+end;
+
+// ========================== 
 
 procedure ShowMenu;
 begin
-    Writeln('Menu:');
-    Writeln('0. Converter multiestado inicial em AFN-&');
-    Writeln('1. Converter AFN-& em AFN');
-    Writeln('2. Converter AFN em AFD');
-    Writeln('3. Minimizar AFD');
-    Writeln('4. Testar palavras');
-    Writeln('5. Sair');
+  Writeln;
+  Writeln('=================================================');
+  Writeln('|                      MENU                     |');
+  Writeln('|0. Converter multiestado inicial em AFN-&      |');
+  Writeln('|1. Converter AFN-& em AFN                      |');
+  Writeln('|2. Converter AFN em AFD                        |');
+  Writeln('|3. Minimizar AFD                               |');
+  Writeln('|4. Testar palavras                             |');
+  Writeln('|5. Sair                                        |');
+  Writeln('=================================================');
+  Writeln;
 end;
 
 begin
@@ -110,10 +233,10 @@ begin
         if jsonObj.Find('alfabeto') <> nil then
         begin
             jsonArr := jsonObj.Arrays['alfabeto'];
-            
+
             SetLength(alfabeto, jsonArr.Count);
             for i := 0 to jsonArr.Count - 1 do
-                alfabeto[i] := jsonArr.Strings[i][1]; // pega primeiro caractere
+                alfabeto[i] := jsonArr.Strings[i][1];
         end;
 
         // ---- Estados ----
@@ -131,7 +254,7 @@ begin
         begin
             jsonArr := jsonObj.Arrays['estados_iniciais'];
             SetLength(estadosIniciais, jsonArr.Count);
-            
+
             if jsonArr.Count > 1 then
               isAFN_Multiestado_Inicial := True;
 
@@ -164,33 +287,13 @@ begin
                 case item.JSONType of
                     jtArray:
                     begin
-                        // Expecting [fromState, toState, symbol]
+                    
                         innerArr := TJSONArray(item);
-                        begin
-                            transicoes[i].fromState := innerArr.Strings[0];
-                            transicoes[i].toState   := innerArr.Strings[1];
-                            transicoes[i].symbol    := innerArr.Strings[2][1];
-
-                            // Se a transição for com símbolo '&' e o autômato não for AFN de multiestado inicial, marcar como AFN-E
-                            if (transicoes[i].symbol = '&') and (not isAFN_Multiestado_Inicial) then
-                                isAFN_E := True;
-
-                            // Se existe mais de uma transição para o mesmo estado de origem e símbolo, é um AFN
-                            if not isAFN_Multiestado_Inicial and not isAFN_E and (not isAFN) then
-                            begin
-                              count := 0;
-                              for j := 0 to jsonArr.Count - 1 do
-                              begin
-                                  if (transicoes[j].fromState = transicoes[i].fromState) and (transicoes[j].symbol = transicoes[i].symbol) then
-                                      Inc(count);
-                              end;
-                              if count > 1 then
-                              begin
-                                  isAFN := True;
-                                  Break;
-                              end;
-                            end;
-                        end
+                        transicoes[i].fromState := innerArr.Strings[0];
+                        transicoes[i].toState   := innerArr.Strings[1];
+                        transicoes[i].symbol    := innerArr.Strings[2][1];
+                        if (transicoes[i].symbol = '&') and (not isAFN_Multiestado_Inicial) then
+                            isAFN_E := True;
                     end;
                 else
                     begin
@@ -203,8 +306,17 @@ begin
         end;
     end;
 
+    isAFN := False;
+    if (not isAFN_Multiestado_Inicial) and (not isAFN_E) then
+    begin
+        if ExisteNaoDeterminismo(transicoes) then
+          isAFN := True;
+    end;
+
     if (not isAFN) and (not isAFN_E) and (not isAFN_Multiestado_Inicial) then
-        isAFD := True;
+        isAFD := True
+    else
+        isAFD := False;
 
     if isAFN_Multiestado_Inicial then
         Writeln('O autômato é um AFN de multiestado inicial')
@@ -215,7 +327,7 @@ begin
     else
         Writeln('O autômato é um AFD');
 
-    // Loop do menu
+    // Loop do Menu
     while True do
     begin
         ShowMenu;
@@ -226,20 +338,87 @@ begin
             '1': Writeln('Função 1 selecionada');
             '2': Writeln('Função 2 selecionada');
             '3': Writeln('Função 3 selecionada');
+
+            //=========== (4) ===========
+
             '4':
             begin
-                Writeln('Função 4 selecionada');
+                Writeln('Teste de palavras (AFD)');
+                if not isAFD then // Se não for um AFD...
+                begin
+                    Writeln('Esse autômato não é um AFD!!!');
+                    Writeln('-> Carregue um AFD ou converta antes de testar!');
+                    Continue;
+                end;
+                if Length(estadosIniciais) <> 1 then //Se a quantidade de estados for diferente de 1
+                begin
+                    if Length(estadosIniciais) > 1 then
+                    begin
+                        Writeln('Esse AFD está errado, possui mais de 1 estado inicial.');
+                        Continue;
+                    end;
+                    if Length(estadosIniciais) = 0 then
+                    begin
+                        Writeln('AFD sem estado inicial.');
+                        Continue;
+                    end;
+                end;
+
                 Writeln('1 Via Arquivo');
                 Writeln('2 Via Terminal');
                 Write('Escolha uma opcao: ');
                 Readln(subchoice);
+
                 case subchoice of
-                    '1': Writeln('Função 1 selecionada');
-                    '2': Writeln('Função 2 selecionada');
+                    '1':
+                    begin
+                        fname := 'input/palavras.txt';
+                        if not FileExists(fname) then
+                            Writeln('Arquivo ', fname, ' nao encontrado.')
+                        else
+                        begin
+                            sl := TStringList.Create;
+                            sl.LoadFromFile(fname);
+                            Writeln;
+                            Writeln('Testando ', sl.Count, ' palavra(s) de ', fname, ':');
+                            Writeln;
+                            for i := 0 to sl.Count-1 do
+                            begin
+                                w := Trim(sl[i]);
+                                if w = '' then Continue;
+                                if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
+                                    Writeln(w, ' -> ACEITA')
+                                else
+                                    Writeln(w, ' -> REJEITA');
+                            end;
+                            sl.Free;
+                        end;
+                    end;
+
+                    '2':
+                    begin
+                        Writeln('Digite palavras (ENTER vazio para encerrar):');
+                        while True do
+                        begin
+                            Write('> ');
+                            ReadLn(w);
+                            w := Trim(w);
+                            if w = '' then Break;
+
+                            if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
+                                Writeln('ACEITA')
+                            else
+                                Writeln('REJEITA');
+                        end;
+                    end;
+
                 else
                     Writeln('Opção inválida');
                 end;
             end;
+
+            //=========== (4) ===========
+
             '5':
             begin
                 Writeln('Saindo...');
