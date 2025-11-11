@@ -13,6 +13,9 @@ function BuildStateName(const afnStates: array of string): string;
 
 implementation
 
+uses 
+    SysUtils;
+
 type
     TAFDStateMap = record
         afdState: string;
@@ -70,7 +73,7 @@ var
     trans: TTransicao;
     reachable: Boolean;
     tempEstados, currentStates: array of string;
-    afdStateName: string;
+    afdStateName, removedState: string;
     
     // Tabela de transições do AFN
     afnTransitionTable: array of record
@@ -86,6 +89,10 @@ var
         symbol: char;
     end;
         
+    var stateRenameMap: array of record
+        oldName: string;
+        newName: string;
+    end;
 
 begin
 WriteLn('Convertendo AFN para AFD...');
@@ -105,10 +112,10 @@ WriteLn('Convertendo AFN para AFD...');
     // Preencher a tabela de transições do AFN
     for i := 0 to High(AFNrec.transicoes) do
     begin
-        WriteLn('Processando transição ', i);
-        WriteLn('DEBUG: ', AFNrec.transicoes[i].fromState, ' ',
-                        AFNrec.transicoes[i].toState, ' ',
-                        Ord(AFNrec.transicoes[i].symbol));
+        // WriteLn('Processando transição ', i);
+        // WriteLn('DEBUG: ', AFNrec.transicoes[i].fromState, ' ',
+        //                 AFNrec.transicoes[i].toState, ' ',
+        //                 Ord(AFNrec.transicoes[i].symbol));
         // Processar cada transição do AFN
         trans := AFNrec.transicoes[i];
         
@@ -143,15 +150,15 @@ WriteLn('Convertendo AFN para AFD...');
     end;
 
     // Debug: imprimir tabela de transições do AFN
-    for i := 0 to High(afnTransitionTable) do
-    begin
-        WriteLn('From State: ', afnTransitionTable[i].fromState,
-                ' Symbol: ', afnTransitionTable[i].symbol,
-                ' To States: ');
-        for j := 0 to High(afnTransitionTable[i].toStates) do
-            Write(afnTransitionTable[i].toStates[j], ' ');
-        WriteLn;
-    end;
+    // for i := 0 to High(afnTransitionTable) do
+    // begin
+    //     WriteLn('From State: ', afnTransitionTable[i].fromState,
+    //             ' Symbol: ', afnTransitionTable[i].symbol,
+    //             ' To States: ');
+    //     for j := 0 to High(afnTransitionTable[i].toStates) do
+    //         Write(afnTransitionTable[i].toStates[j], ' ');
+    //     WriteLn;
+    // end;
 
     // Tabela de transição do AFD - Terão 2^(estados do AFN) estados possíveis
     // Cada estado do AFD será uma combinação de estados do AFN
@@ -181,13 +188,13 @@ WriteLn('Convertendo AFN para AFD...');
     end;
 
     // Debug: imprimir estados do AFD
-    WriteLn('Estados do AFD:');
-    for i := 0 to High(AFDrec.estados) do
-        WriteLn(AFDrec.estados[i]);
+    // WriteLn('Estados do AFD:');
+    // for i := 0 to High(AFDrec.estados) do
+    //     WriteLn(AFDrec.estados[i]);
 
     // Montar a tabela de transições do AFD
     SetLength(afdTransitionTable, 0);
-    WriteLn('Montando tabela de transições do AFD...');
+    // WriteLn('Montando tabela de transições do AFD...');
     
     // Para cada estado do AFD
     for i := 0 to High(AFDrec.estados) do
@@ -286,89 +293,172 @@ WriteLn('Convertendo AFN para AFD...');
     end;
 
     // Debug: imprimir tabela de transições do AFD
-    WriteLn('Tabela de Transições do AFD:');
+    // WriteLn('Tabela de Transições do AFD:');
+    // for i := 0 to High(afdTransitionTable) do
+    // begin
+    //     WriteLn('From State: ', afdTransitionTable[i].fromState,
+    //             ' Symbol: ', afdTransitionTable[i].symbol,
+    //             ' To States: ');
+    //     for j := 0 to High(afdTransitionTable[i].toStates) do
+    //         Write(afdTransitionTable[i].toStates[j], ' ');
+    //     WriteLn;
+    // end;
+
+    // Preencher as transições do AFD
+    SetLength(AFDrec.transicoes, 0);
     for i := 0 to High(afdTransitionTable) do
     begin
-        WriteLn('From State: ', afdTransitionTable[i].fromState,
-                ' Symbol: ', afdTransitionTable[i].symbol,
-                ' To States: ');
         for j := 0 to High(afdTransitionTable[i].toStates) do
-            Write(afdTransitionTable[i].toStates[j], ' ');
-        WriteLn;
-    end;
-
-    // Encontrar estados finais
-    for i := 0 to High(afdStateMap) do
-    begin
-        for j := 0 to High(AFNrec.estadosFinais) do
         begin
-            // Verificar se o estado final do AFN está contido no conjunto de estados do AFD
-            for k := 0 to High(afdStateMap[i].afnStates) do
-            begin
-                if afdStateMap[i].afnStates[k] = AFNrec.estadosFinais[j] then
-                begin
-                    // Adicionar ao conjunto de estados finais do AFD
-                    SetLength(AFDrec.estadosFinais, Length(AFDrec.estadosFinais) + 1);
-                    AFDrec.estadosFinais[High(AFDrec.estadosFinais)] := afdStateMap[i].afdState;
-                    Break;
-                end;
-            end;
-        end;
-    end;
-
-    // Renomear os estados para caracterizá-los como iguais caso tenham os mesmos estados do AFN, independentemente da ordem que aparecem na string
-    // como {q0, q1, q2} é igual a {q2, q1, q0}
-    for i := 0 to High(AFDrec.estados) do
-    begin
-        WriteLn('Renomeando estado ', AFDrec.estados[i]);
-        // Encontrar o mapeamento correspondente
-        for j := 0 to High(afdStateMap) do
-        begin
-        WriteLn('Comparando com mapeamento ', afdStateMap[j].afdState);
-            if AFDrec.estados[i] = afdStateMap[j].afdState then
-            begin
-                // Reconstruir o nome do estado com os estados do AFN em ordem
-                AFDrec.estados[i] := BuildStateName(afdStateMap[j].afnStates);
-                Break;
-            end;
-        end;
-    end;
-
-    // Eliminar estados inalcançáveis
-    for i := 0 to High(AFDrec.estados) do
-    begin
-        reachable := False;
-        for j := 0 to High(AFDrec.transicoes) do
-        begin
-            if AFDrec.transicoes[j].fromState = AFDrec.estados[i] then
-            begin
-                reachable := True;
-                Break;
-            end;
-        end;
-        if not reachable then
-        begin
-            // Remover estado inalcançável
-            AFDrec.estados[i] := '';
-        end;
-    end;
-
-    // Remover entradas vazias
-    tempEstados := [];
-    for i := 0 to High(AFDrec.estados) do
-    begin
-        if AFDrec.estados[i] <> '' then
-        begin
-            SetLength(tempEstados, Length(tempEstados) + 1);
-            tempEstados[High(tempEstados)] := AFDrec.estados[i];
+            SetLength(AFDrec.transicoes, Length(AFDrec.transicoes) + 1);
+            AFDrec.transicoes[High(AFDrec.transicoes)].fromState := afdTransitionTable[i].fromState;
+            AFDrec.transicoes[High(AFDrec.transicoes)].toState := afdTransitionTable[i].toStates[j];
+            AFDrec.transicoes[High(AFDrec.transicoes)].symbol := afdTransitionTable[i].symbol;
         end;
     end;
 
     // Finalizar o AFD
     AFDrec.estadoInicial := GetOrAddAfdState(AFNrec.estadosIniciais);
 
+    // Eliminar estados inalcançáveis
+    i := 0;
+    while i <= High(AFDrec.estados) do
+    begin
+        reachable := (AFDrec.estados[i] = AFDrec.estadoInicial);
+        if not reachable then
+        begin
+            for j := 0 to High(AFDrec.transicoes) do
+            begin
+                if ((AFDrec.transicoes[j].toState = AFDrec.estados[i]) and
+                    (AFDrec.transicoes[j].fromState <> AFDrec.transicoes[j].toState)) then
+                begin
+                    reachable := True;
+                    Break;
+                end;
+            end;
+        end;
+
+        if reachable then
+        begin
+            Inc(i);
+            Continue;
+        end;
+
+        removedState := AFDrec.estados[i];
+        for j := i to High(AFDrec.estados) - 1 do
+            AFDrec.estados[j] := AFDrec.estados[j + 1];
+        SetLength(AFDrec.estados, Length(AFDrec.estados) - 1);
+
+        j := 0;
+        while j <= High(AFDrec.transicoes) do
+        begin
+            if (AFDrec.transicoes[j].fromState = removedState) or
+               (AFDrec.transicoes[j].toState = removedState) then
+            begin
+                for k := j to High(AFDrec.transicoes) - 1 do
+                    AFDrec.transicoes[k] := AFDrec.transicoes[k + 1];
+                SetLength(AFDrec.transicoes, Length(AFDrec.transicoes) - 1);
+            end
+            else
+                Inc(j);
+        end;
+        i := 0;
+    end;
+
+    // Encontrar estados finais
+    for i := 0 to High(AFDrec.estados) do
+    begin
+        for j := 0 to High(AFNrec.estadosFinais) do
+        begin
+            // Verificar se o estado final do AFN está contido no conjunto de estados do AFD
+            if Pos(AFNrec.estadosFinais[j], AFDrec.estados[i]) > 0 then
+            begin
+                // Adicionar ao conjunto de estados finais do AFD
+                SetLength(AFDrec.estadosFinais, Length(AFDrec.estadosFinais) + 1);
+                AFDrec.estadosFinais[High(AFDrec.estadosFinais)] := AFDrec.estados[i];
+                Break;
+            end;
+        end;
+    end;
+
     // Printar AFD
-    WriteLn('AFD:');
+    // WriteLn('AFD:');
+    // for i := 0 to High(AFDrec.estados) do
+    //     WriteLn('Estado: ', AFDrec.estados[i]);
+    // WriteLn('Estado Inicial: ', AFDrec.estadoInicial);
+    // WriteLn('Estados Finais: ');
+    // for i := 0 to High(AFDrec.estadosFinais) do
+    //     WriteLn(AFDrec.estadosFinais[i]);
+    // WriteLn('Transições: ');
+    // for i := 0 to High(AFDrec.transicoes) do
+    // begin
+    //     WriteLn('From: ', AFDrec.transicoes[i].fromState,
+    //             ' To: ', AFDrec.transicoes[i].toState,
+    //             ' Symbol: ', AFDrec.transicoes[i].symbol);
+    // end;
+
+    // Renomear estados do AFD, para q0, q1, q2, na ordem em que aparecem
+    
+    SetLength(stateRenameMap, Length(AFDrec.estados));
+    for i := 0 to High(AFDrec.estados) do
+    begin
+        stateRenameMap[i].oldName := AFDrec.estados[i];
+        stateRenameMap[i].newName := 'q' + IntToStr(i);;
+    end;
+
+    // Aplicar renomeação nas transições
+    for i := 0 to High(AFDrec.transicoes) do
+    begin
+        for j := 0 to High(stateRenameMap) do
+        begin
+            if AFDrec.transicoes[i].fromState = stateRenameMap[j].oldName then
+            begin
+                AFDrec.transicoes[i].fromState := stateRenameMap[j].newName;
+            end;
+            if AFDrec.transicoes[i].toState = stateRenameMap[j].oldName then
+            begin
+                AFDrec.transicoes[i].toState := stateRenameMap[j].newName;
+            end;
+        end;
+    end;
+
+    // Aplicar renomeação nos estados finais
+    for i := 0 to High(AFDrec.estadosFinais) do
+    begin
+        for j := 0 to High(stateRenameMap) do
+        begin
+            if AFDrec.estadosFinais[i] = stateRenameMap[j].oldName then
+            begin
+                AFDrec.estadosFinais[i] := stateRenameMap[j].newName;
+            end;
+        end;
+    end;
+
+    // Aplicar renomeação no estado inicial
+    for j := 0 to High(stateRenameMap) do
+    begin
+        if AFDrec.estadoInicial = stateRenameMap[j].oldName then
+        begin
+            AFDrec.estadoInicial := stateRenameMap[j].newName;
+            Break;
+        end;
+    end;
+
+    // Atualizar lista de estados do AFD
+
+    for i := 0 to High(AFDrec.estados) do
+    begin
+        for j := 0 to High(stateRenameMap) do
+        begin
+            if AFDrec.estados[i] = stateRenameMap[j].oldName then
+            begin
+                AFDrec.estados[i] := stateRenameMap[j].newName;
+            end;
+        end;
+    end;
+
+    // Printar novamente o AFD renomeado
+    WriteLn('AFD Renomeado:');
     for i := 0 to High(AFDrec.estados) do
         WriteLn('Estado: ', AFDrec.estados[i]);
     WriteLn('Estado Inicial: ', AFDrec.estadoInicial);
@@ -376,17 +466,13 @@ WriteLn('Convertendo AFN para AFD...');
     for i := 0 to High(AFDrec.estadosFinais) do
         WriteLn(AFDrec.estadosFinais[i]);
     WriteLn('Transições: ');
-    for i := 0 to High(afdTransitionTable) do
+    for i := 0 to High(AFDrec.transicoes) do
     begin
-        for j := 0 to High(afdTransitionTable[i].toStates) do
-        begin   
-            WriteLn('From: ', afdTransitionTable[i].fromState,
-                    ' To: ', afdTransitionTable[i].toStates[j],
-                    ' Symbol: ', afdTransitionTable[i].symbol);
-        end;
+        WriteLn('From: ', AFDrec.transicoes[i].fromState,
+                ' To: ', AFDrec.transicoes[i].toState,
+                ' Symbol: ', AFDrec.transicoes[i].symbol);
     end;
 
-    AFDrec.estados := Copy(tempEstados, 0, Length(tempEstados));
     ConvertAFNtoAFD := AFDrec;
 end;
 end.
