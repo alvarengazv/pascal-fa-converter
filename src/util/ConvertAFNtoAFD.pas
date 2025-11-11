@@ -65,7 +65,8 @@ end;
 function ConvertAFNtoAFD(const AFNrec: TAFN): TAFD;
 var
     AFDrec: TAFD;
-    i, j, k, m, fromStateIndex, tableLines: Integer;
+    i, j, k, m, n, z, fromStateIndex, tableLines: Integer;
+    size: Integer;
     trans: TTransicao;
     reachable: Boolean;
     tempEstados, currentStates: array of string;
@@ -81,7 +82,7 @@ var
     // Tabela de transições do AFD
     afdTransitionTable: array of record
         fromState: string;
-        toState: array of string;
+        toStates: array of string;
         symbol: char;
     end;
         
@@ -186,32 +187,58 @@ WriteLn('Convertendo AFN para AFD...');
 
     // Montar a tabela de transições do AFD
     SetLength(afdTransitionTable, 0);
+    WriteLn('Montando tabela de transições do AFD...');
+    
+    // Para cada estado do AFD
     for i := 0 to High(AFDrec.estados) do
     begin
-        for j := 0 to High(AFDrec.estados[i]) do
+        // Para cada símbolo do alfabeto
+        for j := 0 to High(AFNrec.alfabeto) do
         begin
+            // Construir conjunto de estados destino do AFD
+            SetLength(currentStates, 0);
+            
+            // Para cada transição do AFN
             for k := 0 to High(afnTransitionTable) do
             begin
-                if (afnTransitionTable[k].fromState = AFDrec.estados[i][j]) then
+                // Se o símbolo coincide e o estado de origem do AFN está contido no estado do AFD
+                if (afnTransitionTable[k].symbol = AFNrec.alfabeto[j]) and
+                   (Pos(afnTransitionTable[k].fromState, AFDrec.estados[i]) > 0) then
                 begin
-                    // Se o estado de origem do AFN está na combinação do estado do AFD
-                    // Adicionar transições para cada símbolo
-                    // ... completar lógica para preencher a tabela de transições do AFD
-                    // Exemplo:
-                    WriteLn('Adicionando transição do AFD para estado ', AFDrec.estados[i], ' com símbolo ', afnTransitionTable[k].symbol);
-                    SetLength(afdTransitionTable, Length(afdTransitionTable) + 1);
-                    with afdTransitionTable[High(afdTransitionTable)] do
+                    // Adicionar todos os estados de destino do AFN ao conjunto
+                    for m := 0 to High(afnTransitionTable[k].toStates) do
                     begin
-                        fromState := AFDrec.estados[i][j];
-                        symbol := afnTransitionTable[k].symbol;
-                        // Combinar os estados de destino do AFN
-                        for m := 0 to High(afnTransitionTable[k].toStates) do
+                        // Verificar se o estado já está no conjunto (evitar duplicados)
+                        reachable := False;
+                        for n := 0 to High(currentStates) do
                         begin
-                            SetLength(afdTransitionTable[High(afdTransitionTable)].toState, Length(afdTransitionTable[High(afdTransitionTable)].toState) + 1);
-                            afdTransitionTable[High(afdTransitionTable)].toState[High(afdTransitionTable[High(afdTransitionTable)].toState)] := afnTransitionTable[k].toStates[m];
+                            if currentStates[n] = afnTransitionTable[k].toStates[m] then
+                            begin
+                                reachable := True;
+                                Break;
+                            end;
+                        end;
+                        
+                        if not reachable then
+                        begin
+                            SetLength(currentStates, Length(currentStates) + 1);
+                            currentStates[High(currentStates)] := afnTransitionTable[k].toStates[m];
                         end;
                     end;
                 end;
+            end;
+            
+            // Se há estados de destino, criar a transição do AFD
+            if Length(currentStates) > 0 then
+            begin
+                SetLength(afdTransitionTable, Length(afdTransitionTable) + 1);
+                afdTransitionTable[High(afdTransitionTable)].fromState := AFDrec.estados[i];
+                afdTransitionTable[High(afdTransitionTable)].symbol := AFNrec.alfabeto[j];
+                
+                // Construir o nome do estado de destino do AFD
+                afdStateName := GetOrAddAfdState(currentStates);
+                SetLength(afdTransitionTable[High(afdTransitionTable)].toStates, 1);
+                afdTransitionTable[High(afdTransitionTable)].toStates[0] := afdStateName;
             end;
         end;
     end;
@@ -223,8 +250,8 @@ WriteLn('Convertendo AFN para AFD...');
         WriteLn('From State: ', afdTransitionTable[i].fromState,
                 ' Symbol: ', afdTransitionTable[i].symbol,
                 ' To States: ');
-        for j := 0 to High(afdTransitionTable[i].toState) do
-            Write(afdTransitionTable[i].toState[j], ' ');
+        for j := 0 to High(afdTransitionTable[i].toStates) do
+            Write(afdTransitionTable[i].toStates[j], ' ');
         WriteLn;
     end;
 
@@ -257,6 +284,46 @@ WriteLn('Convertendo AFN para AFD...');
         begin
             SetLength(tempEstados, Length(tempEstados) + 1);
             tempEstados[High(tempEstados)] := AFDrec.estados[i];
+        end;
+    end;
+
+    // Finalizar o AFD
+    AFDrec.estadoInicial := GetOrAddAfdState(AFNrec.estadosIniciais);
+    // Encontrar estados finais
+    for i := 0 to High(afdStateMap) do
+    begin
+        for j := 0 to High(AFNrec.estadosFinais) do
+        begin
+            // Verificar se o estado final do AFN está contido no conjunto de estados do AFD
+            for k := 0 to High(afdStateMap[i].afnStates) do
+            begin
+                if afdStateMap[i].afnStates[k] = AFNrec.estadosFinais[j] then
+                begin
+                    // Adicionar ao conjunto de estados finais do AFD
+                    SetLength(AFDrec.estadosFinais, Length(AFDrec.estadosFinais) + 1);
+                    AFDrec.estadosFinais[High(AFDrec.estadosFinais)] := afdStateMap[i].afdState;
+                    Break;
+                end;
+            end;
+        end;
+    end;
+
+    // Printar AFD
+    WriteLn('AFD:');
+    for i := 0 to High(AFDrec.estados) do
+        WriteLn('Estado: ', AFDrec.estados[i]);
+    WriteLn('Estado Inicial: ', AFDrec.estadoInicial);
+    WriteLn('Estados Finais: ');
+    for i := 0 to High(AFDrec.estadosFinais) do
+        WriteLn(AFDrec.estadosFinais[i]);
+    WriteLn('Transições: ');
+    for i := 0 to High(afdTransitionTable) do
+    begin
+        for j := 0 to High(afdTransitionTable[i].toStates) do
+        begin   
+            WriteLn('From: ', afdTransitionTable[i].fromState,
+                    ' To: ', afdTransitionTable[i].toStates[j],
+                    ' Symbol: ', afdTransitionTable[i].symbol);
         end;
     end;
 
