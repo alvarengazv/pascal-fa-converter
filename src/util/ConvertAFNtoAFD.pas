@@ -65,7 +65,7 @@ end;
 function ConvertAFNtoAFD(const AFNrec: TAFN): TAFD;
 var
     AFDrec: TAFD;
-    i, j, k, m, n, z, fromStateIndex, tableLines: Integer;
+    i, j, k, m, n, z, fromStateIndex, tableLines, desiredIdx, insertPos, idx: Integer;
     size: Integer;
     trans: TTransicao;
     reachable: Boolean;
@@ -205,7 +205,7 @@ WriteLn('Convertendo AFN para AFD...');
                 if (afnTransitionTable[k].symbol = AFNrec.alfabeto[j]) and
                    (Pos(afnTransitionTable[k].fromState, AFDrec.estados[i]) > 0) then
                 begin
-                    // Adicionar todos os estados de destino do AFN ao conjunto
+                    // Adicionar todos os estados de destino do AFN ao conjunto, na ordem em que aparecem, para evitar duplicados, como {q0, q1} e {q1, q0}
                     for m := 0 to High(afnTransitionTable[k].toStates) do
                     begin
                         // Verificar se o estado já está no conjunto (evitar duplicados)
@@ -221,8 +221,50 @@ WriteLn('Convertendo AFN para AFD...');
                         
                         if not reachable then
                         begin
+                            // Insert in order defined by AFNrec.estados (so {q0,q1,q2} ordering is preserved)
+                            // Find the index of the state we want to insert in AFNrec.estados
+                            desiredIdx := -1;
+                            for z := 0 to High(AFNrec.estados) do
+                            begin
+                                if AFNrec.estados[z] = afnTransitionTable[k].toStates[m] then
+                                begin
+                                    desiredIdx := z;
+                                    Break;
+                                end;
+                            end;
+                            if desiredIdx = -1 then
+                                desiredIdx := High(AFNrec.estados) + 1; // fallback to end
+
+                            // Determine insertion position in currentStates by comparing AFN indices
+                            insertPos := 0;
+                            while insertPos < Length(currentStates) do
+                            begin
+                                // find index of currentStates[insertPos] in AFNrec.estados
+                                idx := -1;
+                                for n := 0 to High(AFNrec.estados) do
+                                begin
+                                    if AFNrec.estados[n] = currentStates[insertPos] then
+                                    begin
+                                        idx := n;
+                                        Break;
+                                    end;
+                                end;
+                                if idx = -1 then
+                                    idx := High(AFNrec.estados) + 1; // unknown items go to end
+
+                                // stop when we find a larger AFN index
+                                if idx > desiredIdx then
+                                    Break;
+
+                                insertPos := insertPos + 1;
+                            end;
+
+                            // Insert at insertPos
                             SetLength(currentStates, Length(currentStates) + 1);
-                            currentStates[High(currentStates)] := afnTransitionTable[k].toStates[m];
+                            for n := High(currentStates) downto insertPos + 1 do
+                                currentStates[n] := currentStates[n - 1];
+                            currentStates[insertPos] := afnTransitionTable[k].toStates[m];
+                            
                         end;
                     end;
                 end;
@@ -255,7 +297,42 @@ WriteLn('Convertendo AFN para AFD...');
         WriteLn;
     end;
 
-    // Encontrar os estados finais do AFD, que são aqueles que contêm pelo menos um estado final do AFN
+    // Encontrar estados finais
+    for i := 0 to High(afdStateMap) do
+    begin
+        for j := 0 to High(AFNrec.estadosFinais) do
+        begin
+            // Verificar se o estado final do AFN está contido no conjunto de estados do AFD
+            for k := 0 to High(afdStateMap[i].afnStates) do
+            begin
+                if afdStateMap[i].afnStates[k] = AFNrec.estadosFinais[j] then
+                begin
+                    // Adicionar ao conjunto de estados finais do AFD
+                    SetLength(AFDrec.estadosFinais, Length(AFDrec.estadosFinais) + 1);
+                    AFDrec.estadosFinais[High(AFDrec.estadosFinais)] := afdStateMap[i].afdState;
+                    Break;
+                end;
+            end;
+        end;
+    end;
+
+    // Renomear os estados para caracterizá-los como iguais caso tenham os mesmos estados do AFN, independentemente da ordem que aparecem na string
+    // como {q0, q1, q2} é igual a {q2, q1, q0}
+    for i := 0 to High(AFDrec.estados) do
+    begin
+        WriteLn('Renomeando estado ', AFDrec.estados[i]);
+        // Encontrar o mapeamento correspondente
+        for j := 0 to High(afdStateMap) do
+        begin
+        WriteLn('Comparando com mapeamento ', afdStateMap[j].afdState);
+            if AFDrec.estados[i] = afdStateMap[j].afdState then
+            begin
+                // Reconstruir o nome do estado com os estados do AFN em ordem
+                AFDrec.estados[i] := BuildStateName(afdStateMap[j].afnStates);
+                Break;
+            end;
+        end;
+    end;
 
     // Eliminar estados inalcançáveis
     for i := 0 to High(AFDrec.estados) do
@@ -289,24 +366,6 @@ WriteLn('Convertendo AFN para AFD...');
 
     // Finalizar o AFD
     AFDrec.estadoInicial := GetOrAddAfdState(AFNrec.estadosIniciais);
-    // Encontrar estados finais
-    for i := 0 to High(afdStateMap) do
-    begin
-        for j := 0 to High(AFNrec.estadosFinais) do
-        begin
-            // Verificar se o estado final do AFN está contido no conjunto de estados do AFD
-            for k := 0 to High(afdStateMap[i].afnStates) do
-            begin
-                if afdStateMap[i].afnStates[k] = AFNrec.estadosFinais[j] then
-                begin
-                    // Adicionar ao conjunto de estados finais do AFD
-                    SetLength(AFDrec.estadosFinais, Length(AFDrec.estadosFinais) + 1);
-                    AFDrec.estadosFinais[High(AFDrec.estadosFinais)] := afdStateMap[i].afdState;
-                    Break;
-                end;
-            end;
-        end;
-    end;
 
     // Printar AFD
     WriteLn('AFD:');
