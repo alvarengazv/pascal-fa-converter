@@ -5,34 +5,12 @@ uses
     SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes;
 
 type
-  Transicao = record
-    fromState: string;
-    symbol: char;
-    toState: string;
-  end;
-
-  AFD = record
-    alfabeto: array of char;
-    estados: array of string;
-    estadoInicial: string;
-    estadosFinais: array of string;
-    transicoes: array of Transicao;
-  end;
-
-  AFN = record
-    alfabeto: array of char;
-    estados: array of string;
-    estadoInicial: array of string;
-    estadosFinais: array of string;
-    transicoes: array of Transicao;
-  end;
-
   AFN_E = record
     alfabeto: array of char;
     estados: array of string;
     estadoInicial: array of string;
     estadosFinais: array of string;
-    transicoes: array of Transicao;
+    transicoes: array of TTransicao;
   end;
 
   AFN_multiestado_inicial = record
@@ -40,7 +18,7 @@ type
     estados: array of string;
     estadosIniciais: array of string;
     estadosFinais: array of string;
-    transicoes: array of Transicao;
+    transicoes: array of TTransicao;
   end;
 
     //Vetor de vetores... Matriz.
@@ -58,7 +36,7 @@ var
   estados: array of string;
   estadosIniciais: array of string;
   estadosFinais: array of string;
-  transicoes: array of Transicao;
+  transicoes: array of TTransicao;
   jsonObj: TJSONObject;
   jsonArr: TJSONArray;
   i, j, k, count: Integer;
@@ -71,7 +49,7 @@ var
 
 // ======================= 
 
-function ExisteNaoDeterminismo(const T: array of Transicao): boolean;
+function ExisteNaoDeterminismo(const T: array of TTransicao): boolean;
 var
   i, j: integer;
 begin
@@ -122,7 +100,7 @@ end;
 
 //Construindo a Matriz de transições
 procedure BuildDelta(const estados: array of string; const alfabeto: array of char;
-  const trans: array of Transicao; var delta: IntMatriz);
+  const trans: array of TTransicao; var delta: IntMatriz);
 var
   i, ns, na, f, a, t: Integer;
   //ns -> Número de estados, na -> Tamanho do Alfabeto
@@ -149,7 +127,7 @@ end;
 
 function TestarPalavraAFD(const estados: array of string; const alfabeto: array of char;
   const estadoInicial: string; const estadosFinais: array of string;
-  const trans: array of Transicao; const palavra: string): Boolean;
+  const trans: array of TTransicao; const palavra: string): Boolean;
 var
   delta: IntMatriz;
   i, cur, symi, nxt: Integer;
@@ -358,16 +336,16 @@ begin
                     Writeln('isAFN: ', BoolToStr(afn_obj.isAFN, True));
 
                     afd_result := ConvertAFNtoAFD.ConvertAFNtoAFD(afn_obj);
-                    // Writeln('AFD Resultante:');
-                    // Writeln('Estados: ', Length(afd_result.estados));
-                    // Writeln('Estado Inicial: ', afd_result.estadoInicial);
-                    // Writeln('Estados Finais: ');
-                    // for i := 0 to High(afd_result.estadosFinais) do
-                    //     Write(afd_result.estadosFinais[i], ' ');
-                    // Writeln;
-                    // Writeln('Transições: ', Length(afd_result.transicoes));
-                    // for i := 0 to High(afd_result.transicoes) do
-                    //     Writeln('De ', afd_result.transicoes[i].fromState, ' para ', afd_result.transicoes[i].toState, ' com símbolo ', afd_result.transicoes[i].symbol);
+                    Writeln('Conversão concluída!');
+                    estados := afd_result.estados;
+                    alfabeto := afd_result.alfabeto;
+                    estadosIniciais := [afd_result.estadoInicial];
+                    estadosFinais := afd_result.estadosFinais;
+                    transicoes := afd_result.transicoes;
+                    isAFD := True;
+                    isAFN := False;
+                    isAFN_E := False;
+                    isAFN_Multiestado_Inicial := False;
                 end
                 else
                     Writeln('O autômato já é um AFD, não é necessário converter.');

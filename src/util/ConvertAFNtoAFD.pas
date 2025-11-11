@@ -69,10 +69,9 @@ function ConvertAFNtoAFD(const AFNrec: TAFN): TAFD;
 var
     AFDrec: TAFD;
     i, j, k, m, n, z, fromStateIndex, tableLines, desiredIdx, insertPos, idx: Integer;
-    size: Integer;
     trans: TTransicao;
     reachable: Boolean;
-    tempEstados, currentStates: array of string;
+    currentStates: array of string;
     afdStateName, removedState: string;
     
     // Tabela de transições do AFN
