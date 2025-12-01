@@ -2,7 +2,8 @@
 program main;
 
 uses
-    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN;
+    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN,
+    MinimizeAFD;
 
 type
   AFN_E = record
@@ -430,7 +431,42 @@ begin
                 else
                     Writeln('O autômato já é um AFD, não é necessário converter.');
             end;
-            '3': Writeln('Função 3 selecionada');
+            '3':
+            begin
+              Writeln('Minimizar AFD');
+              if not isAFD then
+              begin
+                Writeln('O autômato usado não é um AFD!');
+                continue;
+              end;
+
+              if Length(estadosIniciais) <> 1 then
+              begin
+                Writeln('AFD inválido, há mais de um estado inicial. ');
+                Continue;
+              end;
+
+              afd_result.alfabeto := alfabeto;
+              afd_result.estados := estados;
+              afd_result.estadoInicial := estadosIniciais[0];
+              afd_result.estadosFinais := estadosFinais;
+              afd_result.transicoes := transicoes;
+
+              MinimizarAFD(afd_result, afd_result);
+              alfabeto := afd_result.alfabeto;
+              estados := afd_result.estados;
+              SetLength(estadosIniciais, 1);
+              estadosIniciais[0] := afd_result.estadoInicial;
+              estadosFinais := afd_result.estadosFinais;
+              transicoes := afd_result.transicoes;
+
+              isAFD := True;
+              isAFN := False;
+              isAFN_E := False;
+              isAFN_Multiestado_Inicial := False;
+
+              Writeln('AFD minimizado!');
+            end;
 
             //=========== (4) ===========
 
@@ -478,10 +514,21 @@ begin
                             for i := 0 to sl.Count-1 do
                             begin
                                 w := Trim(sl[i]);
-                                if w = '' then Continue;
+
+                                // Reconhecer palavra vazia (antes eu não tinha feito)
+                                if (w = '') or (w = '&') or (w = 'ε') then
+                                begin
+                                    if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, '') then
+                                        Writeln('PALAVRA VAZIA -> ACEITA')
+                                    else
+                                        Writeln('PALAVRA VAZIA -> REJEITA');
+                                    Continue;
+                                end;
+
+                                // As outras palavras que não sao vazia
                                 if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
                                     Writeln(w, ' -> ACEITA')
-                                else
+                                else 
                                     Writeln(w, ' -> REJEITA');
                             end;
                             sl.Free;
@@ -490,21 +537,36 @@ begin
 
                     '2':
                     begin
-                        Writeln('Digite palavras (ENTER vazio para encerrar):');
+                        Writeln('Digite palavras para testar.');
+                        Writeln('- ENTER = palavra vazia (ε)');
+                        Writeln('- Digite "sair" para encerrar.');
                         while True do
                         begin
                             Write('> ');
                             ReadLn(w);
                             w := Trim(w);
-                            if w = '' then Break;
 
+                            // Comando para sair
+                            if LowerCase(w) = 'sair' then
+                                Break;
+
+                            // ENTER (string vazia) = palavra vazia
+                            if w = '' then
+                            begin
+                                if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, '') then
+                                    Writeln('ε -> ACEITA')
+                                else
+                                    Writeln('ε -> REJEITA');
+                                Continue;
+                            end;
+
+                            // Qualquer outra palavra "normal"
                             if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
-                                Writeln('ACEITA')
+                                Writeln(w, ' -> ACEITA')
                             else
-                                Writeln('REJEITA');
+                                Writeln(w, ' -> REJEITA');
                         end;
                     end;
-
                 else
                     Writeln('Opção inválida');
                 end;
