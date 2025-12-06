@@ -2,7 +2,7 @@
 program main;
 
 uses
-    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN;
+    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN, ConvertMultiToAFNE;
 
 type
   AFN_E = record
@@ -317,7 +317,90 @@ begin
         Write('Escolha uma opção: ');
         Readln(choice);
         case choice of
-            '0': Writeln('Função 0 selecionada');
+            '0': 
+            begin
+                Writeln('Convertendo AFN multiestado inicial em AFN-&...');
+                if isAFN_Multiestado_Inicial then
+                begin
+                    afn_obj.alfabeto := alfabeto;
+                    afn_obj.estados := estados;
+                    afn_obj.estadosIniciais := estadosIniciais;
+                    afn_obj.estadosFinais := estadosFinais;
+                    afn_obj.transicoes := transicoes;
+                    afn_obj.isAFN := isAFN;
+                    afn_obj.isAFN_E := isAFN_E;
+                    afn_obj.isAFN_Multiestado_Inicial := isAFN_Multiestado_Inicial;
+
+                    afn_obj := ConvertMultiToAFNE.ConvertMultiToAFNE(afn_obj);
+
+                    alfabeto := afn_obj.alfabeto;
+                    estados := afn_obj.estados;
+                    estadosIniciais := afn_obj.estadosIniciais;
+                    estadosFinais := afn_obj.estadosFinais;
+                    transicoes := afn_obj.transicoes;
+
+                    isAFN_Multiestado_Inicial := False;
+                    isAFN_E := True;
+                    isAFN := True;
+                    
+                    Writeln('Autômato convertido com sucesso!');
+                    Writeln('{');
+                    
+                    // Alfabeto
+                    Writeln('    "alfabeto": [');
+                    for i := 0 to High(alfabeto) do
+                    begin
+                        Write('        "', alfabeto[i], '"');
+                        if i < High(alfabeto) then Writeln(',') else Writeln;
+                    end;
+                    Writeln('    ],');
+
+                    // Estados
+                    Writeln('    "estados": [');
+                    for i := 0 to High(estados) do
+                    begin
+                        Write('        "', estados[i], '"');
+                        if i < High(estados) then Writeln(',') else Writeln;
+                    end;
+                    Writeln('    ],');
+
+                    // Estados Iniciais
+                    Writeln('    "estados_iniciais": [');
+                    for i := 0 to High(estadosIniciais) do
+                    begin
+                        Write('        "', estadosIniciais[i], '"');
+                        if i < High(estadosIniciais) then Writeln(',') else Writeln;
+                    end;
+                    Writeln('    ],');
+
+                    // Estados Finais
+                    Writeln('    "estados_finais": [');
+                    for i := 0 to High(estadosFinais) do
+                    begin
+                        Write('        "', estadosFinais[i], '"');
+                        if i < High(estadosFinais) then Writeln(',') else Writeln;
+                    end;
+                    Writeln('    ],');
+
+                    // Transições
+                    Writeln('    "transicoes": [');
+                    for i := 0 to High(transicoes) do
+                    begin
+                        Writeln('        [');
+                        Writeln('            "', transicoes[i].fromState, '",');
+                        Writeln('            "', transicoes[i].toState, '",');
+                        Writeln('            "', transicoes[i].symbol, '"');
+                        Write('        ]');
+                        if i < High(transicoes) then Writeln(',') else Writeln;
+                    end;
+                    Writeln('    ]');
+
+                    Writeln('}');
+                    
+                end
+                else
+                    Writeln('O automato nao possui multiplos estados iniciais.');
+            end;
             '1': 
             begin
                 Writeln('Convertendo AFN-& em AFN...');
