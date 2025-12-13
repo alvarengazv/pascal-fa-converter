@@ -1,4 +1,6 @@
 unit CommonTypes;
+{$mode fpc}{$H+}
+
 interface
 type
     TTransicao = record

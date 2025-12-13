@@ -1,6 +1,6 @@
 unit ConvertAFNEtoAFN;
 
-{$mode fpc}
+{$mode fpc}{$H+}
 
 interface
 

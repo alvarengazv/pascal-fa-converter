@@ -1,6 +1,6 @@
 unit ConvertMultiToAFNE;
 
-{$mode fpc}
+{$mode fpc}{$H+}
 
 interface
 

@@ -1,4 +1,6 @@
 unit AFD;
+{$mode fpc}{$H+}
+
 interface
 
 uses

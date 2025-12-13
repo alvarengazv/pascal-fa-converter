@@ -1,4 +1,6 @@
 unit AFN;
+{$mode fpc}{$H+}
+
 interface
 
 uses

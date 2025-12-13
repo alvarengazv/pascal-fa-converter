@@ -1,9 +1,8 @@
-{$mode fpc}
+{$mode fpc}{$H+}
 program main;
 
 uses
-    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN, ConvertMultiToAFNE;
-    MinimizeAFD;
+    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN, ConvertMultiToAFNE, MinimizeAFD;
 
 type
   AFN_E = record
@@ -534,6 +533,14 @@ begin
               afd_result.estadoInicial := estadosIniciais[0];
               afd_result.estadosFinais := estadosFinais;
               afd_result.transicoes := transicoes;
+
+              // garantir que o estado inicial existe na lista de estados
+              if IndexOfStr(estados, estadosIniciais[0]) < 0 then
+              begin
+                Writeln('ERRO: Estado inicial "', estadosIniciais[0], '" nao existe na lista de estados.');
+                Writeln('Dica: Isso geralmente ocorre apos renomear estados (q0,q1,...) sem atualizar o inicial.');
+                Continue;
+              end;
 
               MinimizarAFD(afd_result, afd_result);
               alfabeto := afd_result.alfabeto;
