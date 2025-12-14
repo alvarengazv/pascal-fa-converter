@@ -36,10 +36,9 @@ var
   transicoes: array of TTransicao;
   jsonObj: TJSONObject;
   jsonArr: TJSONArray;
-  i, j, k, count: Integer;
+  i: Integer;
   item: TJSONData;
   innerArr: TJSONArray;
-  s: string;
   isAFD, isAFN, isAFN_E, isAFN_Multiestado_Inicial: Boolean;
   sl: TStringList;
   fname, w: string;
@@ -322,7 +321,8 @@ begin
                     isAFN_E := False;
                     isAFN := True;
                     isAFN_Multiestado_Inicial := False;
-                    isAFN := False;
+                    isAFd := False;
+                    
                     // if Length(estadosIniciais) > 1 then isAFN_Multiestado_Inicial := True;
                     Writeln('Autômato convertido com sucesso!');
                     Writeln('{');

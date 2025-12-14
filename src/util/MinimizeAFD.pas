@@ -5,7 +5,7 @@ unit MinimizeAFD;
 interface
 
 uses
-  AFD, CommonTypes;
+  AFD, CommonTypes, SysUtils;
 
 procedure MinimizarAFD(const Orig: TAFD; var Min: TAFD);
 
@@ -17,9 +17,9 @@ type
     Num_Estados   : Integer;
     Num_Simbolos  : Integer;
     eInicial     : Integer;
-    eFinal     : array of Boolean;
-    Trans       : array of array of Integer; // [estado, símbolo]
-    StateNames  : array of string;
+    eFinal       : array of Boolean;
+    Trans        : array of array of Integer; // [estado, símbolo]
+    StateNames   : array of string;
     Alphabeto    : array of char;
   end;
 
@@ -51,8 +51,165 @@ begin
   EncontrarIndice_simbolo := -1;
 end;
 
-//Converter o externo (TFDA) para o interno (TFDInt)
+// Totalização do AFD mandando p/ estado morto
 
+function TemTransicao(const trans: array of TTransicao; const fromS: string; const sym: char): Boolean;
+var
+  i: Integer;
+begin
+  TemTransicao := False;
+  for i := 0 to High(trans) do
+  begin
+    if (trans[i].fromState = fromS) and (trans[i].symbol = sym) then
+    begin
+      TemTransicao := True;
+      Exit;
+    end;
+  end;
+end;
+
+function EstadoExiste(const estados: array of string; const s: string): Boolean;
+begin
+  EstadoExiste := (EncontrarIndice_estado(estados, s) >= 0);
+end;
+
+function IsFinalState(const finais: array of string; const s: string): Boolean;
+begin
+  IsFinalState := (EncontrarIndice_estado(finais, s) >= 0);
+end;
+
+//Só considera transição existente se o destino também for válidonão vazio e existente em estados
+function TemTransicaoValida(const trans: array of TTransicao; const estados: array of string; const fromS: string; const sym: char): Boolean;
+var
+  i: Integer;
+begin
+  TemTransicaoValida := False;
+  for i := 0 to High(trans) do
+  begin
+    if (trans[i].fromState = fromS) and (trans[i].symbol = sym) then
+    begin
+      if (trans[i].toState <> '') and EstadoExiste(estados, trans[i].toState) then
+      begin
+        TemTransicaoValida := True;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+function CriarEstadoMorto(const estados: array of string): string;
+var
+  base: string;
+  i: Integer;
+  cand: string;
+begin
+  base := 'EstadoMorto';
+  if not EstadoExiste(estados, base) then
+  begin
+    CriarEstadoMorto := base;
+    Exit;
+  end;
+
+  i := 0;
+  while True do
+  begin
+    cand := base + '_' + IntToStr(i);
+    if not EstadoExiste(estados, cand) then
+    begin
+      CriarEstadoMorto := cand;
+      Exit;
+    end;
+    Inc(i);
+  end;
+end;
+
+procedure AdicionarTransicao(var A: TAFD; const fromS, toS: string; const sym: char);
+var
+  n: Integer;
+begin
+  n := Length(A.transicoes);
+  SetLength(A.transicoes, n + 1);
+  A.transicoes[n].fromState := fromS;
+  A.transicoes[n].toState   := toS;
+  A.transicoes[n].symbol    := sym;
+end;
+
+procedure TotalizarAFD(var A: TAFD);
+var
+  EstadoMorto: string;
+  i, j: Integer;
+  PrecisaEstadoMorto: Boolean;
+begin
+  // Se não tem estados ou alfabeto, não há o que totalizar
+  if (Length(A.estados) = 0) or (Length(A.alfabeto) = 0) then
+    Exit;
+
+  // Checa se falta alguma transição: se faltar, então precisa do EstadoMorto
+  // Aqui, se encontrar qualquer, QAUlQUER lugar sem transição, então a boolena fica true.
+  PrecisaEstadoMorto := False;
+  for i := 0 to High(A.estados) do
+  begin
+    for j := 0 to High(A.alfabeto) do
+    begin
+      //usa TemTransicaoValida para não "enganar" quando existe transição com toState inválido, tipo ''.
+      if not TemTransicaoValida(A.transicoes, A.estados, A.estados[i], A.alfabeto[j]) then
+      begin
+        PrecisaEstadoMorto := True;
+        Break;
+      end;
+    end;
+    if PrecisaEstadoMorto then Break;
+  end;
+
+  if not PrecisaEstadoMorto then
+  begin
+    // debug
+    // Writeln('O AFD ja é total.');
+    Exit;
+  end;
+
+
+  // Cria estado morto único
+  EstadoMorto := CriarEstadoMorto(A.estados);
+
+
+  // Adiciona EstadoMorto aos estados que já existem
+  // A partir daqui, o estado morto começa a contar
+  SetLength(A.estados, Length(A.estados) + 1);
+  A.estados[High(A.estados)] := EstadoMorto;
+
+
+  // Aqui o código vai percorrer cada par de (estado, símbolo) do WORK
+  // que eh um objeto TAFD. Se uma transição não existir, ele criado
+  // o estado morto para essa transição.
+
+  for i := 0 to High(A.estados) do
+  begin
+    for j := 0 to High(A.alfabeto) do
+    begin
+      //usa TemTransicaoValida para evitar contar transição "quebrada" como existente (quebrada seria transição com -1)
+      if not TemTransicaoValida(A.transicoes, A.estados, A.estados[i], A.alfabeto[j]) then
+      begin
+        AdicionarTransicao(A, A.estados[i], EstadoMorto, A.alfabeto[j]);
+        //debug
+        // Writeln(' Add ', A.estados[i], ' --', A.alfabeto[j], '--> ', EstadoMorto);
+      end;
+    end;
+  end;
+
+  // Garante loops do EstadoMorto (caso não existam)
+  //Isso daqui é redundante mas melhor garantir que remediar (de novo)
+  for j := 0 to High(A.alfabeto) do
+  begin
+    if not TemTransicaoValida(A.transicoes, A.estados, EstadoMorto, A.alfabeto[j]) then
+      AdicionarTransicao(A, EstadoMorto, EstadoMorto, A.alfabeto[j]);
+  end;
+  // Debug
+  // Writeln('AFD totalizado. EstadoMorto=', EstadoMorto, ' | Estados=', Length(A.estados), ' | Transicoes=', Length(A.transicoes));
+end;
+
+
+// Converter o externo (TAFD) para o interno (TDFAInt)
 procedure ToInternal(const A: TAFD; var D: TDFAInt);
 var
   i, idx, fromIdx, toIdx, symIdx: Integer;
@@ -105,7 +262,7 @@ begin
   end;
 end;
 
-//Faz o inverso, converte o interno (TDFAInt) para o externo (TDFA)
+//Faz o inverso, converte o interno (TDFAInt) para o externo (TAFD)
 
 procedure ToExternal(const D: TDFAInt; var A: TAFD);
 var
@@ -264,6 +421,7 @@ end;
 
 procedure MinimizarAFD(const Orig: TAFD; var Min: TAFD);
 var
+  Work: TAFD;                  // cópia para totalizar
   D0, D1, D2: TDFAInt;         // D0 = e o AFD original, D1 é o tratado sem inalcançáveis e, finalmente, D2 é o minimizado
   Dist      : array of array of Boolean;
   RepToNew  : array of Integer;
@@ -272,20 +430,23 @@ var
   i, rep, newIdx: Integer;
 
 begin
+  // Totalizando o AFD antes de minimizar (se for AFD parcial não funciona)
+  Work := Orig;
+  TotalizarAFD(Work);
+
   // Converte para o tipo interno para facilitar aplicação de algoritmos em matriz;
-  ToInternal(Orig, D0);
+  ToInternal(Work, D0);
 
   //DEBUG ==========================
-  Writeln('[MIN] Entrou na MinimizarAFD');
-  Writeln('[MIN] D0.Num_Estados=', D0.Num_Estados, ' D0.eInicial=', D0.eInicial);
-
+  //Writeln('Entrou na MinimizarAFD');
+  //Writeln('D0.Num_Estados=', D0.Num_Estados, ' D0.eInicial=', D0.eInicial);
 
   // Remove os estados inalcançáveis, que é uma etapa de minimização;
   RemoverInalcancaveis(D0, D1);
 
   //DEBUG ==========================
-  Writeln('[MIN] Depois de RemoverInalcancaveis');
-  Writeln('[MIN] D1.Num_Estados=', D1.Num_Estados, ' D1.eInicial=', D1.eInicial);
+  Writeln('Depois de RemoverInalcancaveis');
+  Writeln('D1.Num_Estados=', D1.Num_Estados, ' D1.eInicial=', D1.eInicial);
 
 
   // Caso trivial
@@ -431,8 +592,7 @@ begin
   else
     D2.eInicial := -1;
 
-//-------PRINT DA MINIMIZAÇÃO----------
-
+  //-------PRINT DA MINIMIZAÇÃO----------
   Writeln('--- MINIMIZACAO: RESULTADO INTERNO ---');
   Writeln('Num estados: ', D2.Num_Estados);
   Writeln('Estado inicial idx: ', D2.eInicial);
@@ -450,14 +610,11 @@ begin
     end;
 
   Writeln('-------------------');
-
-
-//-------------------------------------
+  //-------------------------------------
 
   // Converte de volta para TAFD
+  ToExternal(D2, Min);
 
-    ToExternal(D2, Min);
-
-  end;
+end;
 
 end.
