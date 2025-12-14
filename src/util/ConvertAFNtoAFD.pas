@@ -31,58 +31,59 @@ type
 var
     afdStateMap: array of TAFDStateMap;
 
-//Tive que adicionar essa parte pra "resolver" os nomes antigos -> novo
-    AFNOrder: TStringDynArray;
+// //Tive que adicionar essa parte pra "resolver" os nomes antigos -> novo
+//     AFNOrder: TStringDynArray;
 
-function OrderIndex(const s: string): Integer;
-var
-  i: Integer;
-begin
-  for i := 0 to High(AFNOrder) do
-    if AFNOrder[i] = s then
-      Exit(i);
+// function OrderIndex(const s: string): Integer;
+// var
+//   i: Integer;
+// begin
+//   for i := 0 to High(AFNOrder) do
+//     if AFNOrder[i] = s then
+//       Exit(i);
 
-  // Se não achar, manda para o fim (não deveria ocorrer em condições normais)
-  Exit(High(AFNOrder) + 1000);
-end;
+//   // Se não achar, manda para o fim (não deveria ocorrer em condições normais)
+//   Exit(High(AFNOrder) + 1000);
+// end;
 
-function CanonicalizeStates(const states: array of string): TStringDynArray;
-var
-  arr: TStringDynArray;
-  i, j: Integer;
-  tmp: string;
-begin
-  SetLength(arr, Length(states));
-  for i := 0 to High(states) do
-    arr[i] := states[i];
+// function CanonicalizeStates(const states: array of string): TStringDynArray;
+// var
+//   arr: TStringDynArray;
+//   i, j: Integer;
+//   tmp: string;
+// begin
+//   SetLength(arr, Length(states));
+//   for i := 0 to High(states) do
+//     arr[i] := states[i];
 
-  // Insertion sort pela ordem do AFNOrder
-  for i := 1 to High(arr) do
-  begin
-    tmp := arr[i];
-    j := i - 1;
-    while (j >= 0) and (OrderIndex(arr[j]) > OrderIndex(tmp)) do
-    begin
-      arr[j + 1] := arr[j];
-      Dec(j);
-    end;
-    arr[j + 1] := tmp;
-  end;
+//   // Insertion sort pela ordem do AFNOrder
+//   for i := 1 to High(arr) do
+//   begin
+//     tmp := arr[i];
+//     j := i - 1;
+//     while (j >= 0) and (OrderIndex(arr[j]) > OrderIndex(tmp)) do
+//     begin
+//       arr[j + 1] := arr[j];
+//       Dec(j);
+//     end;
+//     arr[j + 1] := tmp;
+//   end;
 
-  CanonicalizeStates := arr;
-end;
+//   CanonicalizeStates := arr;
+// end;
 
 function GetOrAddAfdState(const afnStates: array of string): string;
 var
     stateName: string;
     i: Integer;
-    canon: TStringDynArray;
+    // canon: TStringDynArray;
 begin
     // sempre arruma o nome, para evitar {p2,p0} vs {p0,p2}
-    canon := CanonicalizeStates(afnStates);
+    // canon := CanonicalizeStates(afnStates);
 
     // Criar nome do estado do AFD baseado na combinação de estados do AFN
-    stateName := BuildStateName(canon);
+    // stateName := BuildStateName(canon);
+    stateName := BuildStateName(afnStates);
 
     // Verificar se o estado já existe
     for i := 0 to High(afdStateMap) do
@@ -94,12 +95,17 @@ begin
     // Se não existir, adicionar novo estado
     SetLength(afdStateMap, Length(afdStateMap) + 1);
     afdStateMap[High(afdStateMap)].afdState := stateName;
-
-    SetLength(afdStateMap[High(afdStateMap)].afnStates, Length(canon));
-    for i := 0 to High(canon) do
-        afdStateMap[High(afdStateMap)].afnStates[i] := canon[i];
-
+    SetLength(afdStateMap[High(afdStateMap)].afnStates, Length(afnStates));
+    for i := 0 to High(afnStates) do
+        afdStateMap[High(afdStateMap)].afnStates[i] := afnStates[i];
+        
     GetOrAddAfdState := stateName;
+
+    // SetLength(afdStateMap[High(afdStateMap)].afnStates, Length(canon));
+    // for i := 0 to High(canon) do
+    //     afdStateMap[High(afdStateMap)].afnStates[i] := canon[i];
+
+    // GetOrAddAfdState := stateName;
     
 end;
 
@@ -150,10 +156,10 @@ var
 begin
     WriteLn('Convertendo AFN para AFD...');
 
-    // PATCH: define ordem canônica global para a canonização dos subconjuntos
-    SetLength(AFNOrder, Length(AFNrec.estados));
-    for i := 0 to High(AFNrec.estados) do
-      AFNOrder[i] := AFNrec.estados[i];
+    // // PATCH: define ordem canônica global para a canonização dos subconjuntos
+    // SetLength(AFNOrder, Length(AFNrec.estados));
+    // for i := 0 to High(AFNrec.estados) do
+    //   AFNOrder[i] := AFNrec.estados[i];
 
     // Inicializar o AFD
     SetLength(AFDrec.alfabeto, Length(AFNrec.alfabeto));

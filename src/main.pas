@@ -2,7 +2,7 @@
 program main;
 
 uses
-    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN, ConvertMultiToAFNE, MinimizeAFD;
+    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN, ConvertMultiToAFNE, MinimizeAFD, TestarPalavraAFD;
 
 type
   AFN_E = record
@@ -20,9 +20,6 @@ type
     estadosFinais: array of string;
     transicoes: array of TTransicao;
   end;
-
-    //Vetor de vetores... Matriz.
-  IntMatriz = array of array of Integer;
 
 var
   data: TJSONData;
@@ -70,105 +67,6 @@ begin
       end;
     end;
   end;
-end;
-
-//Mapear nomes de estado p/ índices inteiros
-function IndexOfStr(const arr: array of string; const s: string): Integer;
-var i: Integer;
-begin
-  for i := 0 to High(arr) do
-    if arr[i] = s then
-    begin
-      IndexOfStr := i;
-      Exit;
-    end;
-  IndexOfStr := -1;
-end;
-
-//Mapear nomes de estado p/ índices inteiros
-function IndexOfChar(const arr: array of char; const c: char): Integer;
-var i: Integer;
-begin
-  for i := 0 to High(arr) do
-    if arr[i] = c then
-    begin
-      IndexOfChar := i;
-      Exit;
-    end;
-  IndexOfChar := -1;
-end;
-
-//Construindo a Matriz de transições
-procedure BuildDelta(const estados: array of string; const alfabeto: array of char;
-  const trans: array of TTransicao; var delta: IntMatriz);
-var
-  i, ns, na, f, a, t: Integer;
-  //ns -> Número de estados, na -> Tamanho do Alfabeto
-  //Esses dois definem o tamanho da matriz delta
-begin
-  ns := Length(estados);
-  na := Length(alfabeto);
-  SetLength(delta, ns);
-  for i := 0 to ns-1 do
-  begin
-    SetLength(delta[i], na);
-    FillChar(delta[i][0], SizeOf(Integer)*na, $FF); // -1 em todos
-  end;
-
-  for i := 0 to High(trans) do
-  begin
-    f := IndexOfStr(estados, trans[i].fromState); //Linha da Matriz
-    a := IndexOfChar(alfabeto, trans[i].symbol);  //Coluna da Matriz
-    t := IndexOfStr(estados, trans[i].toState);   //Valor Salvo na Matriz
-    if (f >= 0) and (a >= 0) and (t >= 0) then
-      delta[f][a] := t;
-  end;
-end;
-
-function TestarPalavraAFD(const estados: array of string; const alfabeto: array of char;
-  const estadoInicial: string; const estadosFinais: array of string;
-  const trans: array of TTransicao; const palavra: string): Boolean;
-var
-  delta: IntMatriz;
-  i, cur, symi, nxt: Integer;
-  finalsMask: array of Boolean;
-begin
-  TestarPalavraAFD := False;
-
-  BuildDelta(estados, alfabeto, trans, delta);
-
-  SetLength(finalsMask, Length(estados));
-  for i := 0 to High(finalsMask) do finalsMask[i] := False;
-  for i := 0 to High(estadosFinais) do
-  begin
-    nxt := IndexOfStr(estados, estadosFinais[i]);
-    if nxt >= 0 then finalsMask[nxt] := True;
-  end;
-
-  cur := IndexOfStr(estados, estadoInicial);
-  if cur < 0 then
-  begin
-    TestarPalavraAFD := False; Exit;
-  end;
-
-  for i := 1 to Length(palavra) do
-  begin
-    symi := IndexOfChar(alfabeto, palavra[i]);
-    if symi < 0 then
-    begin
-      TestarPalavraAFD := False; Exit; // símbolo fora do alfabeto
-    end;
-
-    //Pega a transição do estado atual com o símbolo atual e diz o próximo estado.
-    nxt := delta[cur][symi];
-    if nxt < 0 then
-    begin
-      TestarPalavraAFD := False; Exit; // transição não definida
-    end;
-    cur := nxt;
-  end;
-
-  TestarPalavraAFD := finalsMask[cur];
 end;
 
 // ========================== 
@@ -339,9 +237,10 @@ begin
                     estadosFinais := afn_obj.estadosFinais;
                     transicoes := afn_obj.transicoes;
 
+                    isAFD := False;
                     isAFN_Multiestado_Inicial := False;
                     isAFN_E := True;
-                    isAFN := True;
+                    isAFN := False;
                     
                     Writeln('Autômato convertido com sucesso!');
                     Writeln('{');
@@ -422,6 +321,8 @@ begin
 
                     isAFN_E := False;
                     isAFN := True;
+                    isAFN_Multiestado_Inicial := False;
+                    isAFN := False;
                     // if Length(estadosIniciais) > 1 then isAFN_Multiestado_Inicial := True;
                     Writeln('Autômato convertido com sucesso!');
                     Writeln('{');
@@ -511,7 +412,7 @@ begin
                     isAFN_Multiestado_Inicial := False;
                 end
                 else
-                    Writeln('O autômato já é um AFD, não é necessário converter.');
+                    Writeln('O autômato não é um AFN.');
             end;
             '3':
             begin
@@ -535,12 +436,12 @@ begin
               afd_result.transicoes := transicoes;
 
               // garantir que o estado inicial existe na lista de estados
-              if IndexOfStr(estados, estadosIniciais[0]) < 0 then
-              begin
-                Writeln('ERRO: Estado inicial "', estadosIniciais[0], '" nao existe na lista de estados.');
-                Writeln('Dica: Isso geralmente ocorre apos renomear estados (q0,q1,...) sem atualizar o inicial.');
-                Continue;
-              end;
+              // if IndexOfStr(estados, estadosIniciais[0]) < 0 then
+              // begin
+              //   Writeln('ERRO: Estado inicial "', estadosIniciais[0], '" nao existe na lista de estados.');
+              //   Writeln('Dica: Isso geralmente ocorre apos renomear estados (q0,q1,...) sem atualizar o inicial.');
+              //   Continue;
+              // end;
 
               MinimizarAFD(afd_result, afd_result);
               alfabeto := afd_result.alfabeto;
@@ -608,7 +509,7 @@ begin
                                 // Reconhecer palavra vazia (antes eu não tinha feito)
                                 if (w = '') or (w = '&') or (w = 'ε') then
                                 begin
-                                    if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, '') then
+                                    if TestarPalavraAFD_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, '') then
                                         Writeln('PALAVRA VAZIA -> ACEITA')
                                     else
                                         Writeln('PALAVRA VAZIA -> REJEITA');
@@ -616,7 +517,7 @@ begin
                                 end;
 
                                 // As outras palavras que não sao vazia
-                                if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
+                                if TestarPalavraAFD_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
                                     Writeln(w, ' -> ACEITA')
                                 else 
                                     Writeln(w, ' -> REJEITA');
@@ -643,7 +544,7 @@ begin
                             // ENTER (string vazia) = palavra vazia
                             if w = '' then
                             begin
-                                if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, '') then
+                                if TestarPalavraAFD_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, '') then
                                     Writeln('ε -> ACEITA')
                                 else
                                     Writeln('ε -> REJEITA');
@@ -651,7 +552,7 @@ begin
                             end;
 
                             // Qualquer outra palavra "normal"
-                            if TestarPalavraAFD(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
+                            if TestarPalavraAFD_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
                                 Writeln(w, ' -> ACEITA')
                             else
                                 Writeln(w, ' -> REJEITA');

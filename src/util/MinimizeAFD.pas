@@ -433,31 +433,31 @@ begin
 
 //-------PRINT DA MINIMIZAÇÃO----------
 
-Writeln('--- MINIMIZACAO: RESULTADO INTERNO ---');
-Writeln('Num estados: ', D2.Num_Estados);
-Writeln('Estado inicial idx: ', D2.eInicial);
-Writeln('Estados:');
-for i := 0 to D2.Num_Estados - 1 do
-  Writeln('  ', i, ': ', D2.StateNames[i], ' final=', D2.eFinal[i]);
-Writeln('Transicoes:');
-for i := 0 to D2.Num_Estados - 1 do
-  for a := 0 to D2.Num_Simbolos - 1 do
-  begin
-    if D2.Trans[i,a] >= 0 then
-      Writeln('  ', D2.StateNames[i], ' --', D2.Alphabeto[a], '--> ', D2.StateNames[D2.Trans[i,a]])
-    else
-      Writeln('  ', D2.StateNames[i], ' --', D2.Alphabeto[a], '--> (sem)');
-  end;
+  Writeln('--- MINIMIZACAO: RESULTADO INTERNO ---');
+  Writeln('Num estados: ', D2.Num_Estados);
+  Writeln('Estado inicial idx: ', D2.eInicial);
+  Writeln('Estados:');
+  for i := 0 to D2.Num_Estados - 1 do
+    Writeln('  ', i, ': ', D2.StateNames[i], ' final=', D2.eFinal[i]);
+  Writeln('Transicoes:');
+  for i := 0 to D2.Num_Estados - 1 do
+    for a := 0 to D2.Num_Simbolos - 1 do
+    begin
+      if D2.Trans[i,a] >= 0 then
+        Writeln('  ', D2.StateNames[i], ' --', D2.Alphabeto[a], '--> ', D2.StateNames[D2.Trans[i,a]])
+      else
+        Writeln('  ', D2.StateNames[i], ' --', D2.Alphabeto[a], '--> (sem)');
+    end;
 
-Writeln('-------------------');
+  Writeln('-------------------');
 
 
 //-------------------------------------
 
   // Converte de volta para TAFD
 
-  ToExternal(D2, Min);
+    ToExternal(D2, Min);
 
-end;
+  end;
 
 end.
