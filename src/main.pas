@@ -68,7 +68,114 @@ begin
   end;
 end;
 
-// ========================== 
+// === Verificar AFs ===
+
+function IndexOfStrLocal(const arr: array of string; const s: string): Integer;
+var
+  i: Integer;
+begin
+  for i := 0 to High(arr) do
+    if arr[i] = s then
+      Exit(i);
+  Exit(-1);
+end;
+
+function IndexOfCharLocal(const arr: array of char; const c: char): Integer;
+var
+  i: Integer;
+begin
+  for i := 0 to High(arr) do
+    if arr[i] = c then
+      Exit(i);
+  Exit(-1);
+end;
+
+function EstadoExisteLocal(const estados: array of string; const s: string): Boolean;
+begin
+  EstadoExisteLocal := (IndexOfStrLocal(estados, s) >= 0);
+end;
+
+function SimboloNoAlfabetoLocal(const alfabeto: array of char; const c: char): Boolean;
+begin
+  SimboloNoAlfabetoLocal := (IndexOfCharLocal(alfabeto, c) >= 0);
+end;
+
+procedure ValidarAutomatoOuAbortar(
+  const alfabeto: array of char;
+  const estados: array of string;
+  const estadosIniciais: array of string;
+  const estadosFinais: array of string;
+  const transicoes: array of TTransicao;
+  const permitirEpsilon: Boolean
+);
+var
+  i: Integer;
+  sym: char;
+begin
+  //Estados iniciais e finais devem existir em "estados"
+  for i := 0 to High(estadosIniciais) do
+  begin
+    if not EstadoExisteLocal(estados, estadosIniciais[i]) then
+    begin
+      Writeln('ERRO: estado inicial "', estadosIniciais[i], '" nao existe na lista de estados.');
+      Halt(1);
+    end;
+  end;
+
+  for i := 0 to High(estadosFinais) do
+  begin
+    if not EstadoExisteLocal(estados, estadosFinais[i]) then
+    begin
+      Writeln('ERRO: estado final "', estadosFinais[i], '" nao existe na lista de estados.');
+      Halt(1);
+    end;
+  end;
+
+  //Validar as transições
+  for i := 0 to High(transicoes) do
+  begin
+    if (transicoes[i].fromState = '') or (transicoes[i].toState = '') or (transicoes[i].symbol = #0) then
+    begin
+      Writeln('ERRO: transicao invalida e/ou incompleta no indice ', i, '.');
+      Halt(1);
+    end;
+
+    if not EstadoExisteLocal(estados, transicoes[i].fromState) then
+    begin
+      Writeln('ERRO: transicao ', i, ' tem fromState="', transicoes[i].fromState, '" que nao existe em estados.');
+      Halt(1);
+    end;
+
+    if not EstadoExisteLocal(estados, transicoes[i].toState) then
+    begin
+      Writeln('ERRO: transicao ', i, ' tem toState="', transicoes[i].toState, '" que nao existe em estados.');
+      Halt(1);
+    end;
+
+    sym := transicoes[i].symbol;
+
+    // epsilon
+    if sym = '&' then
+    begin
+      if not permitirEpsilon then
+      begin
+        Writeln('ERRO: transicao ', i, ' usa simbolo "&" (epsilon), mas este automato nao foi marcado como AFN-&.');
+        Halt(1);
+      end;
+      Continue;
+    end;
+
+    // símbolo normal deve estar no alfabeto
+    if not SimboloNoAlfabetoLocal(alfabeto, sym) then
+    begin
+      Writeln('ERRO: transicao ', i, ' tem simbolo "', sym, '" que não existe no alfabeto.');
+      Writeln('      Ex.: "', transicoes[i].fromState, '" --', sym, '--> "', transicoes[i].toState, '".');
+      Halt(1);
+    end;
+  end;
+end;
+
+// =====================
 
 procedure ShowMenu;
 begin
@@ -198,6 +305,9 @@ begin
             end;
         end;
     end;
+
+    // Validação estrita do automato lido
+    ValidarAutomatoOuAbortar(alfabeto, estados, estadosIniciais, estadosFinais, transicoes, isAFN_E or isAFN_Multiestado_Inicial);
 
     isAFN := False;
     if (not isAFN_Multiestado_Inicial) and (not isAFN_E) then
