@@ -422,7 +422,7 @@ begin
 
                     isAFN_E := False;
                     isAFN := True;
-                    if Length(estadosIniciais) > 1 then isAFN_Multiestado_Inicial := True;
+                    // if Length(estadosIniciais) > 1 then isAFN_Multiestado_Inicial := True;
                     Writeln('Autômato convertido com sucesso!');
                     Writeln('{');
                     

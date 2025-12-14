@@ -206,26 +206,10 @@ begin
 
     // 4. Novos Estados Iniciais
     
-    SetLength(outputAFN.estadosIniciais, 0);
+    SetLength(outputAFN.estadosIniciais, Length(inputAFN.estadosIniciais));
     for i := 0 to High(inputAFN.estadosIniciais) do
     begin
-        q := inputAFN.estadosIniciais[i];
-        for j := 0 to High(lambdaClosures) do
-        begin
-            if lambdaClosures[j].state = q then
-            begin
-                
-                for idxC := 0 to High(lambdaClosures[j].closure) do
-                begin
-                    if not ArrayContains(outputAFN.estadosIniciais, lambdaClosures[j].closure[idxC]) then
-                    begin
-                        SetLength(outputAFN.estadosIniciais, Length(outputAFN.estadosIniciais) + 1);
-                        outputAFN.estadosIniciais[High(outputAFN.estadosIniciais)] := lambdaClosures[j].closure[idxC];
-                    end;
-                end;
-                Break;
-            end;
-        end;
+        outputAFN.estadosIniciais[i] := inputAFN.estadosIniciais[i];
     end;
 
     // 5. Novos Estados Finais
@@ -259,7 +243,7 @@ begin
     // 6. Finalizar Flags
     outputAFN.isAFN := True;
     outputAFN.isAFN_E := False;
-    outputAFN.isAFN_Multiestado_Inicial := (Length(outputAFN.estadosIniciais) > 1);
+    // outputAFN.isAFN_Multiestado_Inicial := (Length(outputAFN.estadosIniciais) > 1);
 
     Writeln('Conversao concluida.');
     ConvertAFNEtoAFN := outputAFN;
