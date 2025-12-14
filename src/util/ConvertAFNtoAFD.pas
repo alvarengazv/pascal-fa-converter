@@ -78,8 +78,9 @@ var
     i: Integer;
     // canon: TStringDynArray;
 begin
-    // sempre arruma o nome, para evitar {p2,p0} vs {p0,p2}
-    // canon := CanonicalizeStates(afnStates);
+    // Sempre arruma o nome do conjunto (ordenação canônica desejada) para evitar que
+    // subconjuntos iguais com ordens diferentes sejam tratados como distintos
+    // (ex.: {p2,p0} vs {p0,p2}). A função BuildStateName cria a representação textual.
 
     // Criar nome do estado do AFD baseado na combinação de estados do AFN
     // stateName := BuildStateName(canon);
@@ -156,6 +157,18 @@ var
 begin
     WriteLn('Convertendo AFN para AFD...');
 
+    // Algoritmo geral (construção de subconjuntos / subset construction):
+    // 1) Montar uma tabela mais conveniente das transições do AFN (afnTransitionTable),
+    //    onde cada linha combina um estado de origem e um símbolo, e lista todos os
+    //    estados de destino possíveis (facilita iterações).
+    // 2) Gerar todos os subconjuntos possíveis dos estados do AFN (2^n combinações)
+    //    e criar estados correspondentes no AFD com nomes do tipo '{q0,q1}'.
+    // 3) Para cada estado do AFD e cada símbolo do alfabeto, calcular o conjunto de
+    //    estados destino (união das imagens das transições do AFN) e inserir a
+    //    transição correspondente no AFD.
+    // 4) Eliminar estados inalcançáveis, determinar estados finais do AFD e renomear
+    //    os estados para uma forma mais compacta (q0, q1, ...).
+
     // // PATCH: define ordem canônica global para a canonização dos subconjuntos
     // SetLength(AFNOrder, Length(AFNrec.estados));
     // for i := 0 to High(AFNrec.estados) do
@@ -214,6 +227,10 @@ begin
         end;
     end;
 
+    // Observação: usamos `afnTransitionTable` para agrupar transições por (fromState, symbol)
+    // e manter para cada par a lista de `toStates`. Isso simplifica a montagem das
+    // transições do AFD ao calcular a imagem de um subconjunto por um símbolo.
+
     // Debug: imprimir tabela de transições do AFN
     // for i := 0 to High(afnTransitionTable) do
     // begin
@@ -251,6 +268,9 @@ begin
         SetLength(AFDrec.estados, Length(AFDrec.estados) + 1);
         AFDrec.estados[High(AFDrec.estados)] := afdStateName;
     end;
+
+    // NOTA: neste ponto `afdStateMap` contém a correspondência entre nomes do AFD
+    // e os subconjuntos de estados do AFN que representam.
 
     // Debug: imprimir estados do AFD
     // WriteLn('Estados do AFD:');
@@ -357,6 +377,9 @@ begin
         end;
     end;
 
+    // Após construir `afdTransitionTable`, transformamos em TAFD.transicoes e seguimos
+    // com a limpeza (remoção de estados inalcançáveis) e marcação dos finais.
+
     // Debug: imprimir tabela de transições do AFD
     // WriteLn('Tabela de Transições do AFD:');
     // for i := 0 to High(afdTransitionTable) do
@@ -445,6 +468,9 @@ begin
             end;
         end;
     end;
+
+    // Finalmente renomeamos os estados para índices sequenciais (q0, q1, ...), o que
+    // torna a saída mais legível e compatível com as outras rotinas do projeto.
 
     // Printar AFD
     // WriteLn('AFD:');

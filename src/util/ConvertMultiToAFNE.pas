@@ -54,31 +54,35 @@ begin
     Writeln('Novo estado inicial criado: ', newInitialState);
     
     // 2. Copiar alfabeto (adicionar & se não existir)
-    epsilonExists := False;
-    for i := 0 to High(inputAFN.alfabeto) do
-    begin
-        if inputAFN.alfabeto[i] = '&' then
-        begin
-            epsilonExists := True;
-            Break;
-        end;
-    end;
+    // epsilonExists := False;
+    // for i := 0 to High(inputAFN.alfabeto) do
+    // begin
+    //     if inputAFN.alfabeto[i] = '&' then
+    //     begin
+    //         epsilonExists := True;
+    //         Break;
+    //     end;
+    // end;
     
-    if epsilonExists then
-    begin
-        // Alfabeto já contém &, apenas copiar
-        SetLength(outputAFN.alfabeto, Length(inputAFN.alfabeto));
+    // if epsilonExists then
+    // begin
+    //     // Alfabeto já contém &, apenas copiar
+    //     SetLength(outputAFN.alfabeto, Length(inputAFN.alfabeto));
+    //     for i := 0 to High(inputAFN.alfabeto) do
+    //         outputAFN.alfabeto[i] := inputAFN.alfabeto[i];
+    // end
+    // else
+    // begin
+    //     // Adicionar & ao alfabeto
+    //     SetLength(outputAFN.alfabeto, Length(inputAFN.alfabeto) + 1);
+    //     for i := 0 to High(inputAFN.alfabeto) do
+    //         outputAFN.alfabeto[i] := inputAFN.alfabeto[i];
+    //     outputAFN.alfabeto[High(outputAFN.alfabeto)] := '&';
+    // end;
+
+    SetLength(outputAFN.alfabeto, Length(inputAFN.alfabeto));
         for i := 0 to High(inputAFN.alfabeto) do
             outputAFN.alfabeto[i] := inputAFN.alfabeto[i];
-    end
-    else
-    begin
-        // Adicionar & ao alfabeto
-        SetLength(outputAFN.alfabeto, Length(inputAFN.alfabeto) + 1);
-        for i := 0 to High(inputAFN.alfabeto) do
-            outputAFN.alfabeto[i] := inputAFN.alfabeto[i];
-        outputAFN.alfabeto[High(outputAFN.alfabeto)] := '&';
-    end;
     
     // 3. Copiar estados + adicionar novo estado inicial
     SetLength(outputAFN.estados, Length(inputAFN.estados) + 1);

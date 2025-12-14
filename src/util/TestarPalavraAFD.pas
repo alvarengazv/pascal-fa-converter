@@ -76,6 +76,13 @@ var
   i, cur, symi, nxt: Integer;
   finalsMask: array of Boolean;
 begin
+  // Visão geral AFD (determinístico):
+  // - Primeiro construímos a matriz `delta` onde cada linha corresponde a um estado e cada
+  //   coluna a um símbolo do alfabeto; valor -1 indica ausência de transição.
+  // - Em seguida, percorremos a palavra símbolo a símbolo, consultando `delta[cur][sym]`
+  //   para encontrar o próximo estado. Se em algum passo não existir transição definida,
+  //   rejeitamos. Ao final, aceitamos se o estado corrente for final.
+
   TestarPalavraAFD_ := False;
 
   BuildDelta(estados, alfabeto, trans, delta);

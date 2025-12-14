@@ -2,7 +2,7 @@
 program main;
 
 uses
-    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN, ConvertMultiToAFNE, MinimizeAFD, TestarPalavraAFD;
+    SysUtils, Classes, fpjson, jsonparser, ConvertAFNtoAFD, AFN, AFD, CommonTypes, ConvertAFNEtoAFN, ConvertMultiToAFNE, MinimizeAFD, TestarPalavraAFD, TestarPalavraMultiEstadoInicial, TestarPalavraAFN, TestarPalavraAFN_E;
 
 type
   AFN_E = record
@@ -83,6 +83,19 @@ begin
   Writeln('|5. Sair                                        |');
   Writeln('=================================================');
   Writeln;
+end;
+
+// Função auxiliar que encapsula a chamada correta de teste de palavra
+function TestarPalavra(const palavra: string): Boolean;
+begin
+    if isAFN_Multiestado_Inicial then
+        TestarPalavra := TestarPalavraMultiEstadoInicial_(estados, alfabeto, estadosIniciais, estadosFinais, transicoes, palavra)
+    else if isAFN_E then
+        TestarPalavra := TestarPalavraAFN_E_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, palavra)
+    else if isAFN then
+        TestarPalavra := TestarPalavraAFN_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, palavra)
+    else
+        TestarPalavra := TestarPalavraAFD_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, palavra);
 end;
 
 begin
@@ -197,6 +210,11 @@ begin
         isAFD := True
     else
         isAFD := False;
+
+    // // Printar o alfabeto
+    // for w in alfabeto do
+    //     Write(w, ' ');
+    // Writeln;
 
     if isAFN_Multiestado_Inicial then
         Writeln('O autômato é um AFN de multiestado inicial')
@@ -321,8 +339,7 @@ begin
                     isAFN_E := False;
                     isAFN := True;
                     isAFN_Multiestado_Inicial := False;
-                    isAFd := False;
-                    
+                    isAFD := False;
                     // if Length(estadosIniciais) > 1 then isAFN_Multiestado_Inicial := True;
                     Writeln('Autômato convertido com sucesso!');
                     Writeln('{');
@@ -463,26 +480,13 @@ begin
 
             '4':
             begin
-                Writeln('Teste de palavras (AFD)');
-                if not isAFD then // Se não for um AFD...
-                begin
-                    Writeln('Esse autômato não é um AFD!!!');
-                    Writeln('-> Carregue um AFD ou converta antes de testar!');
-                    Continue;
-                end;
-                if Length(estadosIniciais) <> 1 then //Se a quantidade de estados for diferente de 1
-                begin
-                    if Length(estadosIniciais) > 1 then
-                    begin
-                        Writeln('Esse AFD está errado, possui mais de 1 estado inicial.');
-                        Continue;
-                    end;
-                    if Length(estadosIniciais) = 0 then
-                    begin
-                        Writeln('AFD sem estado inicial.');
-                        Continue;
-                    end;
-                end;
+                Writeln('Teste de palavras nos autômatos.');
+                
+                  if Length(estadosIniciais) < 1 then
+                  begin
+                      Writeln('AF não tem estado inicial definido.');
+                      Continue;
+                  end;
 
                 Writeln('1 Via Arquivo');
                 Writeln('2 Via Terminal');
@@ -509,7 +513,7 @@ begin
                                 // Reconhecer palavra vazia (antes eu não tinha feito)
                                 if (w = '') or (w = '&') or (w = 'ε') then
                                 begin
-                                    if TestarPalavraAFD_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, '') then
+                                    if TestarPalavra('') then
                                         Writeln('PALAVRA VAZIA -> ACEITA')
                                     else
                                         Writeln('PALAVRA VAZIA -> REJEITA');
@@ -517,9 +521,9 @@ begin
                                 end;
 
                                 // As outras palavras que não sao vazia
-                                if TestarPalavraAFD_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
+                                if TestarPalavra(w) then
                                     Writeln(w, ' -> ACEITA')
-                                else 
+                                else
                                     Writeln(w, ' -> REJEITA');
                             end;
                             sl.Free;
@@ -542,9 +546,9 @@ begin
                                 Break;
 
                             // ENTER (string vazia) = palavra vazia
-                            if w = '' then
+                            if (w = '') or (w = '&') or (w = 'ε') then
                             begin
-                                if TestarPalavraAFD_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, '') then
+                                if TestarPalavra('') then
                                     Writeln('ε -> ACEITA')
                                 else
                                     Writeln('ε -> REJEITA');
@@ -552,7 +556,7 @@ begin
                             end;
 
                             // Qualquer outra palavra "normal"
-                            if TestarPalavraAFD_(estados, alfabeto, estadosIniciais[0], estadosFinais, transicoes, w) then
+                            if TestarPalavra(w) then
                                 Writeln(w, ' -> ACEITA')
                             else
                                 Writeln(w, ' -> REJEITA');
