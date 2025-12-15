@@ -50,6 +50,11 @@ end;
 
 function TestarPalavraAFN_E_(const estados: array of string; const alfabeto: array of char; const estadoInicial: string; const estadosFinais: array of string; const trans: array of TTransicao; const palavra: string): Boolean;
 var
+  // Máscaras de estados atuais, próximos e finais
+  // curMask: estados alcançados atualmente
+  // nextMask: estados alcançados após ler o próximo símbolo
+  // finalsMask: estados finais do automato
+  // Formato: índice do estado -> Boolean (True se alcançado/é final)
   curMask, nextMask, finalsMask: array of Boolean;
   i, t, fidx, tidx, symi: Integer;
 begin

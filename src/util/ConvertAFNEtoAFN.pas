@@ -243,7 +243,6 @@ begin
     // 6. Finalizar Flags
     outputAFN.isAFN := True;
     outputAFN.isAFN_E := False;
-    // outputAFN.isAFN_Multiestado_Inicial := (Length(outputAFN.estadosIniciais) > 1);
 
     Writeln('Conversao concluida.');
     ConvertAFNEtoAFN := outputAFN;

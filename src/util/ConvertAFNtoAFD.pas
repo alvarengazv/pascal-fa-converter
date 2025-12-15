@@ -31,47 +31,6 @@ type
 var
     afdStateMap: array of TAFDStateMap;
 
-// //Tive que adicionar essa parte pra "resolver" os nomes antigos -> novo
-//     AFNOrder: TStringDynArray;
-
-// function OrderIndex(const s: string): Integer;
-// var
-//   i: Integer;
-// begin
-//   for i := 0 to High(AFNOrder) do
-//     if AFNOrder[i] = s then
-//       Exit(i);
-
-//   // Se não achar, manda para o fim (não deveria ocorrer em condições normais)
-//   Exit(High(AFNOrder) + 1000);
-// end;
-
-// function CanonicalizeStates(const states: array of string): TStringDynArray;
-// var
-//   arr: TStringDynArray;
-//   i, j: Integer;
-//   tmp: string;
-// begin
-//   SetLength(arr, Length(states));
-//   for i := 0 to High(states) do
-//     arr[i] := states[i];
-
-//   // Insertion sort pela ordem do AFNOrder
-//   for i := 1 to High(arr) do
-//   begin
-//     tmp := arr[i];
-//     j := i - 1;
-//     while (j >= 0) and (OrderIndex(arr[j]) > OrderIndex(tmp)) do
-//     begin
-//       arr[j + 1] := arr[j];
-//       Dec(j);
-//     end;
-//     arr[j + 1] := tmp;
-//   end;
-
-//   CanonicalizeStates := arr;
-// end;
-
 function GetOrAddAfdState(const afnStates: array of string): string;
 var
     stateName: string;
@@ -82,8 +41,6 @@ begin
     // subconjuntos iguais com ordens diferentes sejam tratados como distintos
     // (ex.: {p2,p0} vs {p0,p2}). A função BuildStateName cria a representação textual.
 
-    // Criar nome do estado do AFD baseado na combinação de estados do AFN
-    // stateName := BuildStateName(canon);
     stateName := BuildStateName(afnStates);
 
     // Verificar se o estado já existe
@@ -102,12 +59,6 @@ begin
         
     GetOrAddAfdState := stateName;
 
-    // SetLength(afdStateMap[High(afdStateMap)].afnStates, Length(canon));
-    // for i := 0 to High(canon) do
-    //     afdStateMap[High(afdStateMap)].afnStates[i] := canon[i];
-
-    // GetOrAddAfdState := stateName;
-    
 end;
 
 function BuildStateName(const afnStates: array of string): string;
@@ -169,11 +120,6 @@ begin
     // 4) Eliminar estados inalcançáveis, determinar estados finais do AFD e renomear
     //    os estados para uma forma mais compacta (q0, q1, ...).
 
-    // // PATCH: define ordem canônica global para a canonização dos subconjuntos
-    // SetLength(AFNOrder, Length(AFNrec.estados));
-    // for i := 0 to High(AFNrec.estados) do
-    //   AFNOrder[i] := AFNrec.estados[i];
-
     // Inicializar o AFD
     SetLength(AFDrec.alfabeto, Length(AFNrec.alfabeto));
     for i := 0 to High(AFNrec.alfabeto) do
@@ -190,10 +136,6 @@ begin
     // Preencher a tabela de transições do AFN
     for i := 0 to High(AFNrec.transicoes) do
     begin
-        // WriteLn('Processando transição ', i);
-        // WriteLn('DEBUG: ', AFNrec.transicoes[i].fromState, ' ',
-        //                 AFNrec.transicoes[i].toState, ' ',
-        //                 Ord(AFNrec.transicoes[i].symbol));
         // Processar cada transição do AFN
         trans := AFNrec.transicoes[i];
 
@@ -231,17 +173,6 @@ begin
     // e manter para cada par a lista de `toStates`. Isso simplifica a montagem das
     // transições do AFD ao calcular a imagem de um subconjunto por um símbolo.
 
-    // Debug: imprimir tabela de transições do AFN
-    // for i := 0 to High(afnTransitionTable) do
-    // begin
-    //     WriteLn('From State: ', afnTransitionTable[i].fromState,
-    //             ' Symbol: ', afnTransitionTable[i].symbol,
-    //             ' To States: ');
-    //     for j := 0 to High(afnTransitionTable[i].toStates) do
-    //         Write(afnTransitionTable[i].toStates[j], ' ');
-    //     WriteLn;
-    // end;
-
     // Tabela de transição do AFD - Terão 2^(estados do AFN) estados possíveis
     // Cada estado do AFD será uma combinação de estados do AFN
 
@@ -269,13 +200,8 @@ begin
         AFDrec.estados[High(AFDrec.estados)] := afdStateName;
     end;
 
-    // NOTA: neste ponto `afdStateMap` contém a correspondência entre nomes do AFD
+    // Observação: neste ponto `afdStateMap` contém a correspondência entre nomes do AFD
     // e os subconjuntos de estados do AFN que representam.
-
-    // Debug: imprimir estados do AFD
-    // WriteLn('Estados do AFD:');
-    // for i := 0 to High(AFDrec.estados) do
-    //     WriteLn(AFDrec.estados[i]);
 
     // Montar a tabela de transições do AFD
     SetLength(afdTransitionTable, 0);
@@ -313,8 +239,9 @@ begin
 
                         if not reachable then
                         begin
-                            // Insert in order defined by AFNrec.estados (so {q0,q1,q2} ordering is preserved)
-                            // Find the index of the state we want to insert in AFNrec.estados
+                            // Inserir na ordem definida por AFNrec.estados (assim a ordenação {q0,q1,q2} é preservada)
+                            // Encontrar o índice do estado atual em AFNrec.estados
+                            
                             desiredIdx := -1;
                             for z := 0 to High(AFNrec.estados) do
                             begin
@@ -325,9 +252,10 @@ begin
                                 end;
                             end;
                             if desiredIdx = -1 then
-                                desiredIdx := High(AFNrec.estados) + 1; // fallback to end
+                                desiredIdx := High(AFNrec.estados) + 1; // Se não encontrado, colocar no final
 
                             // Determine insertion position in currentStates by comparing AFN indices
+                            // Determinar a posição de inserção em currentStates comparando os índices do AFN
                             insertPos := 0;
                             while insertPos < Length(currentStates) do
                             begin
@@ -342,16 +270,16 @@ begin
                                     end;
                                 end;
                                 if idx = -1 then
-                                    idx := High(AFNrec.estados) + 1; // unknown items go to end
+                                    idx := High(AFNrec.estados) + 1; // Se não encontrado, colocar no final
 
-                                // stop when we find a larger AFN index
+                                // Parar quando encontramos um índice AFN maior
                                 if idx > desiredIdx then
                                     Break;
 
                                 insertPos := insertPos + 1;
                             end;
 
-                            // Insert at insertPos
+                            // Inserrir em 'insertPos'
                             SetLength(currentStates, Length(currentStates) + 1);
                             for n := High(currentStates) downto insertPos + 1 do
                                 currentStates[n] := currentStates[n - 1];
@@ -379,18 +307,6 @@ begin
 
     // Após construir `afdTransitionTable`, transformamos em TAFD.transicoes e seguimos
     // com a limpeza (remoção de estados inalcançáveis) e marcação dos finais.
-
-    // Debug: imprimir tabela de transições do AFD
-    // WriteLn('Tabela de Transições do AFD:');
-    // for i := 0 to High(afdTransitionTable) do
-    // begin
-    //     WriteLn('From State: ', afdTransitionTable[i].fromState,
-    //             ' Symbol: ', afdTransitionTable[i].symbol,
-    //             ' To States: ');
-    //     for j := 0 to High(afdTransitionTable[i].toStates) do
-    //         Write(afdTransitionTable[i].toStates[j], ' ');
-    //     WriteLn;
-    // end;
 
     // Preencher as transições do AFD
     SetLength(AFDrec.transicoes, 0);
@@ -472,22 +388,6 @@ begin
     // Finalmente renomeamos os estados para índices sequenciais (q0, q1, ...), o que
     // torna a saída mais legível e compatível com as outras rotinas do projeto.
 
-    // Printar AFD
-    // WriteLn('AFD:');
-    // for i := 0 to High(AFDrec.estados) do
-    //     WriteLn('Estado: ', AFDrec.estados[i]);
-    // WriteLn('Estado Inicial: ', AFDrec.estadoInicial);
-    // WriteLn('Estados Finais: ');
-    // for i := 0 to High(AFDrec.estadosFinais) do
-    //     WriteLn(AFDrec.estadosFinais[i]);
-    // WriteLn('Transições: ');
-    // for i := 0 to High(AFDrec.transicoes) do
-    // begin
-    //     WriteLn('From: ', AFDrec.transicoes[i].fromState,
-    //             ' To: ', AFDrec.transicoes[i].toState,
-    //             ' Symbol: ', AFDrec.transicoes[i].symbol);
-    // end;
-
     // Renomear estados do AFD, para q0, q1, q2, na ordem em que aparecem
 
     SetLength(stateRenameMap, Length(AFDrec.estados));
@@ -548,7 +448,7 @@ begin
         end;
     end;
 
-    // Printar novamente o AFD renomeado
+    // Printar o AFD renomeado
     WriteLn('AFD Renomeado:');
     for i := 0 to High(AFDrec.estados) do
         WriteLn('Estado: ', AFDrec.estados[i]);

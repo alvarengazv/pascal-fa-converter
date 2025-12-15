@@ -16,7 +16,6 @@ uses
 //  - estadosFinais: vetor contendo os nomes dos estados finais
 //  - trans: vetor de transições (TTransicao com fromState, toState, symbol)
 //  - palavra: a palavra a ser testada (string)
-// Retorna True se a palavra é aceita por pelo menos uma execução não-determinística.
 function TestarPalavraMultiEstadoInicial_(const estados: array of string; const alfabeto: array of char; const estadosIniciais: array of string; const estadosFinais: array of string; const trans: array of TTransicao; const palavra: string): Boolean;
 
 implementation

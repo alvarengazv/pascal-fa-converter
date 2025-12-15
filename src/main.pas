@@ -27,8 +27,6 @@ var
   choice, subchoice: string;
   afd_result: TAFD;
   afn_obj: TAFN;
-//   afn_e_obj: TAFN_E;
-//   afn_multiestado_inicial_obj: TAFN_multiestado_inicial;
   alfabeto: array of char;
   estados: array of string;
   estadosIniciais: array of string;
