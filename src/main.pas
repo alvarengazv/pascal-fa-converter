@@ -606,7 +606,10 @@ begin
                 case subchoice of
                     '1':
                     begin
-                        fname := 'input/palavras.txt';
+                        Write('Digite o nome do arquivo (sem .txt): ');
+                        ReadLn(fname);
+                        fname := 'input/' + Trim(fname) + '.txt';
+
                         if not FileExists(fname) then
                             Writeln('Arquivo ', fname, ' nao encontrado.')
                         else
@@ -620,20 +623,20 @@ begin
                             begin
                                 w := Trim(sl[i]);
 
-                                // Reconhecer palavra vazia (antes eu não tinha feito)
+                                // Reconhecer palavra vazia
                                 if (w = '') or (w = '&') or (w = 'ε') then
                                 begin
                                     if TestarPalavra('') then
-                                        Writeln('PALAVRA VAZIA -> ACEITA')
+                                        Writeln('ε -> ACEITA')
                                     else
-                                        Writeln('PALAVRA VAZIA -> REJEITA');
+                                        Writeln('ε -> REJEITA');
                                     Continue;
                                 end;
 
-                                // As outras palavras que não sao vazia
+                                // As outras palavras que não sao vazias
                                 if TestarPalavra(w) then
                                     Writeln(w, ' -> ACEITA')
-                                else
+                                else 
                                     Writeln(w, ' -> REJEITA');
                             end;
                             sl.Free;

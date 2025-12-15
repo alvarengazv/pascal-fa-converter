@@ -1,0 +1,17 @@
+&
+ab
+ba
+a
+b
+aab
+bab
+baba
+aaaa
+bbbb
+bbbbbbbbab
+aaaaaaaab
+babababab
+aaaaaaa
+bbbbbbba
+bbaaaabb
+abababababab

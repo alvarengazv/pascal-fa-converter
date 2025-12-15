@@ -1,0 +1,15 @@
+&
+aaaaabbbbbccccc
+abcabc
+aaaccc
+bbcc
+cba
+aaaabbbbcccca
+abac
+cccc
+bca
+ababab
+aaaaa
+aabbbcccc
+ac
+bac
